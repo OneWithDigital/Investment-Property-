@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import type { PropertyInputs, ZillowLookupResult } from "@/lib/types";
+import type { MlsLookupResult } from "@/lib/mlsLookup";
 import { NumberField, SectionHeading } from "./FieldGroup";
+import { MlsLookupButton } from "./MlsLookupButton";
 
 interface PropertyFormProps {
   inputs: PropertyInputs;
@@ -110,6 +112,15 @@ export function PropertyForm({
             the listing — that's expected, not an error in the tool.
           </p>
         )}
+        <MlsLookupButton
+          address={inputs.address || lookupValue}
+          onApply={(data: MlsLookupResult) => {
+            const next: PropertyInputs = { ...inputs };
+            if (data.estimatedValue) next.purchasePrice = data.estimatedValue;
+            if (data.estimatedRent) next.monthlyRent = data.estimatedRent;
+            onChange(next);
+          }}
+        />
         {lookupResult?.fetched && (
           <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
             Pulled what Zillow exposed publicly for this listing. Double-check

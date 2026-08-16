@@ -28,7 +28,7 @@ describe("amortizationSchedule", () => {
   it("fully pays off the loan by the end of the term", () => {
     const schedule = amortizationSchedule(200000, 6, 30, 30);
     const lastYear = schedule[schedule.length - 1];
-    expect(lastYear.endingBalance).toBeCloseTo(0, 1);
+    expect(lastYear?.endingBalance).toBeCloseTo(0, 1);
   });
 
   it("principal paid + ending balance equals beginning balance each year", () => {

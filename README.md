@@ -1,19 +1,23 @@
 # Investment Property Analyzer
 
-A web app that runs a full buy-and-hold rental analysis on a property:
-paste a Zillow URL or an address, fill in the numbers, and get cash flow,
-cap rate, cash-on-cash return, DSCR, the 1%/50% rules, a multi-year
-projection with IRR, and a verdict grounded in standard investor
-benchmarks — plus a location/regulatory due-diligence checklist.
+A multi-user web app for analyzing investment properties across five
+property types — Single-Family, Duplex/Small Multifamily, Multi-Unit
+(5+), Commercial, and Short-Term Rental — each with its own calculators
+and buy/pass verdict, plus a Grants & Funding finder for financing new
+builds, remodels, and energy-efficiency work. Sign in, pick a tab, paste
+a Zillow URL or address (or search MLS comps), fill in the numbers, and
+get a full breakdown.
 
 ## Getting started
 
 ```bash
 npm install
+cp .env.example .env   # fill in real values, especially NEXTAUTH_SECRET
+npx prisma migrate dev # creates the local SQLite database
 npm run dev
 ```
 
-Then open http://localhost:3000.
+Then open http://localhost:3000, sign up for an account, and log in.
 
 ## Running tests
 
@@ -21,63 +25,96 @@ Then open http://localhost:3000.
 npm test
 ```
 
-The calculation engine (`lib/calculations.ts`) has unit tests
-(`__tests__/calculations.test.ts`) that check the mortgage payment formula
-against known reference values, the amortization schedule, the IRR solver,
-and cap rate / cash-on-cash / DSCR against hand-computed scenarios.
+Unit tests cover the shared mortgage/amortization/IRR math
+(`__tests__/calculations.test.ts`) and each property-type calculator
+(`__tests__/calc-multi-property.test.ts`) against hand-computed reference
+scenarios — including a derived break-even-occupancy formula for the STR
+calculator.
 
 ## How it works
 
-- **`lib/calculations.ts`** — the calculation engine. Mortgage payment
-  (P&I), monthly/annual NOI, cap rate, cash-on-cash return, DSCR, gross
-  rent multiplier, the 1% and 50% rules, break-even ratio, debt yield, a
-  year-by-year projection (rent growth, expense growth, appreciation,
-  amortization), and an IRR solved via Newton's method over the resulting
-  cash-flow series.
-- **`lib/verdict.ts`** — scores the property against common buy-and-hold
-  benchmarks (positive cash flow, ≥8% cash-on-cash, ≥6% cap rate, ≥1.25
-  DSCR, the 1% rule, break-even ratio) and produces a Strong Buy / Good
-  Investment / Marginal / Pass verdict with a breakdown of which criteria
-  passed.
-- **`lib/locationFactors.ts`** — a state-by-state landlord/tenant
-  regulatory climate reference (rent control, eviction speed, etc.) plus a
-  qualitative due-diligence checklist covering things the spreadsheet
-  can't tell you: schools, crime, job/population growth, flood risk,
-  short-term-rental restrictions, and more.
-- **`lib/zillow.ts`** — parses a Zillow URL into an address/zpid and
-  makes a best-effort server-side fetch of the public listing page.
-- **`app/api/analyze`** — runs the calculation engine + verdict + location
-  lookup for a given set of inputs.
-- **`app/api/zillow`** — the Zillow lookup endpoint.
+### Auth
+Full multi-user accounts via NextAuth (credentials provider, JWT
+sessions) backed by a Prisma + SQLite `User` table (`bcryptjs` password
+hashing). `middleware.ts` gates every route except `/login`, `/signup`,
+and the NextAuth API routes. For production, swap `DATABASE_URL` to a
+real Postgres/MySQL instance — Prisma makes that a one-line change to
+`prisma/schema.prisma`.
 
-## A note on Zillow
+### The five calculators
+Each property type has its own input model, calculation engine, and
+verdict benchmarks under `lib/calc/` — they are not the same formula
+with different labels:
 
-Zillow runs aggressive bot detection (PerimeterX) in front of most of its
-pages, so automated fetches of listing data **will frequently fail**,
-especially from cloud/data-center IPs. That's expected, not a bug — this
-tool is built around that reality:
+- **Single-Family** (`lib/calculations.ts`, `lib/verdict.ts`) — standard
+  buy-and-hold: cap rate, cash-on-cash, DSCR, the 1%/50% rules,
+  appreciation-based projection.
+- **Duplex / Small Multifamily** (`lib/calc/duplex.ts`) — per-unit rent
+  roll with a house-hacking mode: owner-occupant financing, an
+  "effective housing cost" metric (what you actually pay to live there
+  after tenant rent), and a parallel "if fully rented" scenario for once
+  you move out.
+- **Multi-Unit (5+)** (`lib/calc/multiUnit.ts`) — valued by the income
+  approach (NOI ÷ cap rate) instead of comps, separate amortization vs.
+  loan-maturity terms with balloon-risk flagging, per-unit CapEx
+  reserves, and an implied-value-vs-purchase-price comparison against
+  your market cap rate assumption.
+- **Commercial** (`lib/calc/commercial.ts`) — lease-structure-aware
+  (NNN / modified-gross / full-service-gross) with tenant reimbursement
+  modeling, a multi-tenant rent roll, weighted average lease term (WALT)
+  for rollover risk, and price/rent per square foot.
+- **Short-Term Rental** (`lib/calc/shortTermRental.ts`) — ADR × occupancy
+  revenue modeling, platform fees, cleaning turnover economics, an
+  algebraically-derived break-even occupancy, an STR-regulation risk gate
+  (a jurisdiction marked "banned" auto-fails the deal), and an STR-vs-LTR
+  cash flow comparison.
 
-- Pasting a Zillow URL always gets you a parsed address (from the URL
-  slug itself, no network call needed) and a best-effort attempt to pull
-  price/rent/tax data from the public page.
-- When Zillow blocks the fetch, the UI tells you plainly and you fill in
-  price, taxes, insurance, and rent estimate yourself from the listing —
-  numbers you can read off the page in a few seconds. This is the
-  reliable path, not a fallback of last resort.
-- Nothing here bypasses CAPTCHAs, rotates IPs, or does bulk/automated
-  scraping — it's a single best-effort fetch per user-initiated lookup.
+All five funnel through a shared weighted-criteria scorer
+(`lib/verdict/scoreCriteria.ts`) so the verdict UI behaves consistently,
+but each supplies its own benchmarks — e.g. STR requires a higher
+cash-on-cash return (12%+) than long-term rentals (8%+) to reflect the
+added operational effort and regulatory exposure.
+
+### Grants & Funding finder
+`lib/grants.ts` is a curated reference of ~20 real federal (plus
+representative state/local) programs — FHA 203(k), USDA rural repair
+grants/loans, LIHTC, PACE financing, SBA 504, the historic rehab tax
+credit, Opportunity Zones, energy-efficiency tax credits, and more —
+filterable by property type and project type (new build, remodel,
+energy efficiency, etc.). This is a research starting point, not a live
+feed; program terms change and vary a lot by state/city, and deliberately
+contains no external links (verify current details on each agency's own
+site rather than trust a hardcoded URL).
+
+### Property data lookups
+- **Zillow** (`lib/zillow.ts`) — parses a Zillow URL into an address/zpid
+  (no network call needed) and makes a best-effort server-side fetch of
+  the public listing page. Zillow runs aggressive bot detection, so this
+  **will frequently fail**, especially from cloud IPs — that's expected,
+  not a bug. When it's blocked, the UI says so plainly and you fill in
+  price/tax/rent from the listing yourself.
+- **MLS/comps** (`lib/mlsLookup.ts`) — a real (non-scraping) comps and
+  valuation lookup via the [RentCast API](https://www.rentcast.io/api),
+  covering the residential tabs (Single-Family, Duplex, STR). Degrades
+  gracefully with a clear message if `RENTCAST_API_KEY` isn't configured
+  — see `.env.example`.
+- **Location factors** (`lib/locationFactors.ts`) — state-by-state
+  landlord/tenant regulatory climate (rent control, eviction speed) plus
+  a due-diligence checklist covering schools, crime, job growth, flood
+  risk, and more.
 
 ## Known limitations / follow-ups
 
 - Next.js is pinned to the 14.x line (`14.2.35`, latest patched release
-  on that major). A few dependency advisories only get fully resolved by
-  upgrading to Next 15/16, which is a breaking change left for a
-  deliberate follow-up rather than done unprompted.
-- Rent/price/tax data from Zillow (when it does come through) should
-  always be spot-checked against the live listing before trusting the
-  analysis — Zestimates and rent Zestimates can be materially off from
-  real comps.
-- The state-level landlord/tenant data in `lib/locationFactors.ts` is a
-  high-level starting point for due diligence, not legal advice — many
-  rent-control and tenant-protection rules are city-level, not
-  state-level.
+  on that major) and Prisma to the stable 5.x line (Prisma 7 requires a
+  driver-adapter config rewrite). Both are deliberate choices for
+  stability, not oversights — revisit if you want the latest major.
+- MLS/comps coverage (RentCast) is residential-only; Multi-Unit and
+  Commercial tabs don't have a comparable self-serve comps API, so those
+  stay manual-entry.
+- The state-level landlord/tenant data is a high-level starting point,
+  not legal advice — many rent-control and tenant-protection rules are
+  city-level, not state-level.
+- Rent/price/tax data from Zillow or RentCast should always be
+  spot-checked against the live listing/market before trusting the
+  analysis.

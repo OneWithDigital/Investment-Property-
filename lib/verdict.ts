@@ -1,4 +1,5 @@
-import type { CalculationResult, Verdict, VerdictCriterion } from "./types";
+import type { CalculationResult, Verdict, VerdictLabel } from "./types";
+import { computeVerdict, type WeightedCriterion } from "./verdict/scoreCriteria";
 
 /**
  * Benchmarks drawn from widely-cited buy-and-hold rental investing
@@ -18,97 +19,66 @@ const BENCHMARKS = {
   breakEvenRatioMax: 85,
 };
 
+const SUMMARIES: Record<VerdictLabel, string> = {
+  "Strong Buy":
+    "This property clears the standard buy-and-hold benchmarks (cash flow, cash-on-cash, cap rate, DSCR). Confirm the rent and expense assumptions against real comps, then move forward with due diligence.",
+  "Good Investment":
+    "Solid on most fronts but not exceptional everywhere. Worth pursuing, especially if you can improve terms (lower price, better rate, or higher rent) or if it fits a specific strategy like appreciation or house-hacking.",
+  "Marginal — Negotiate":
+    "The deal is cash-flow positive but thin on cushion. Try to negotiate price/terms, verify rent and expense estimates carefully, and stress-test for vacancy or rate increases before committing.",
+  Pass: "Cash flow is positive but the deal underperforms most standard benchmarks. Only proceed if you have a specific thesis (forced appreciation, rezoning, strong local growth) that the numbers alone don't capture.",
+};
+
 export function evaluateVerdict(result: CalculationResult): Verdict {
-  const criteria: VerdictCriterion[] = [];
-
   const positiveCashFlow = result.monthlyCashFlow > 0;
-  criteria.push({
-    label: "Positive monthly cash flow",
-    pass: positiveCashFlow,
-    detail: `Monthly cash flow is $${result.monthlyCashFlow.toFixed(0)}.`,
+
+  const criteria: WeightedCriterion[] = [
+    {
+      label: "Positive monthly cash flow",
+      pass: positiveCashFlow,
+      detail: `Monthly cash flow is $${result.monthlyCashFlow.toFixed(0)}.`,
+      weight: 30,
+    },
+    {
+      label: `Cash-on-cash return ≥ ${BENCHMARKS.cashOnCashGood}%`,
+      pass: result.cashOnCashReturnPercent >= BENCHMARKS.cashOnCashGood,
+      detail: `Cash-on-cash return is ${result.cashOnCashReturnPercent.toFixed(1)}%.`,
+      weight: 20,
+    },
+    {
+      label: `Cap rate ≥ ${BENCHMARKS.capRateGood}%`,
+      pass: result.capRatePercent >= BENCHMARKS.capRateGood,
+      detail: `Cap rate is ${result.capRatePercent.toFixed(1)}%.`,
+      weight: 15,
+    },
+    {
+      label: `DSCR ≥ ${BENCHMARKS.dscrMin.toFixed(2)} (lender comfort zone)`,
+      pass: result.dscr >= BENCHMARKS.dscrMin,
+      detail: `DSCR is ${Number.isFinite(result.dscr) ? result.dscr.toFixed(2) : "∞ (no debt)"}.`,
+      weight: 15,
+    },
+    {
+      label: "Meets the 1% rule (rent ≥ 1% of price)",
+      pass: result.onePercentRulePercent >= BENCHMARKS.onePercentRuleTarget,
+      detail: `Rent is ${result.onePercentRulePercent.toFixed(2)}% of purchase price.`,
+      weight: 10,
+    },
+    {
+      label: `Break-even ratio ≤ ${BENCHMARKS.breakEvenRatioMax}%`,
+      pass: result.breakEvenRatioPercent <= BENCHMARKS.breakEvenRatioMax,
+      detail: `Break-even ratio is ${result.breakEvenRatioPercent.toFixed(0)}% (expenses + debt service as a share of income — lower means more cushion against vacancy).`,
+      weight: 10,
+    },
+  ];
+
+  let bonus = 0;
+  if (result.cashOnCashReturnPercent >= BENCHMARKS.cashOnCashStrong) bonus += 5;
+  if (result.capRatePercent >= BENCHMARKS.capRateStrong) bonus += 5;
+  if (result.dscr >= BENCHMARKS.dscrStrong) bonus += 5;
+
+  return computeVerdict(criteria, bonus, SUMMARIES, {
+    triggered: !positiveCashFlow,
+    summary:
+      "This deal loses money every month at the numbers entered. Renegotiate the price, increase the down payment, or find a way to raise rent/lower expenses before proceeding.",
   });
-
-  const cocPass = result.cashOnCashReturnPercent >= BENCHMARKS.cashOnCashGood;
-  criteria.push({
-    label: `Cash-on-cash return ≥ ${BENCHMARKS.cashOnCashGood}%`,
-    pass: cocPass,
-    detail: `Cash-on-cash return is ${result.cashOnCashReturnPercent.toFixed(1)}%.`,
-  });
-
-  const capRatePass = result.capRatePercent >= BENCHMARKS.capRateGood;
-  criteria.push({
-    label: `Cap rate ≥ ${BENCHMARKS.capRateGood}%`,
-    pass: capRatePass,
-    detail: `Cap rate is ${result.capRatePercent.toFixed(1)}%.`,
-  });
-
-  const dscrPass = result.dscr >= BENCHMARKS.dscrMin;
-  criteria.push({
-    label: `DSCR ≥ ${BENCHMARKS.dscrMin.toFixed(2)} (lender comfort zone)`,
-    pass: dscrPass,
-    detail: `DSCR is ${Number.isFinite(result.dscr) ? result.dscr.toFixed(2) : "∞ (no debt)"}.`,
-  });
-
-  const onePercentPass =
-    result.onePercentRulePercent >= BENCHMARKS.onePercentRuleTarget;
-  criteria.push({
-    label: "Meets the 1% rule (rent ≥ 1% of price)",
-    pass: onePercentPass,
-    detail: `Rent is ${result.onePercentRulePercent.toFixed(2)}% of purchase price.`,
-  });
-
-  const breakEvenPass =
-    result.breakEvenRatioPercent <= BENCHMARKS.breakEvenRatioMax;
-  criteria.push({
-    label: `Break-even ratio ≤ ${BENCHMARKS.breakEvenRatioMax}%`,
-    pass: breakEvenPass,
-    detail: `Break-even ratio is ${result.breakEvenRatioPercent.toFixed(0)}% (expenses + debt service as a share of income — lower means more cushion against vacancy).`,
-  });
-
-  const weights: Record<string, number> = {
-    "Positive monthly cash flow": 30,
-    [`Cash-on-cash return ≥ ${BENCHMARKS.cashOnCashGood}%`]: 20,
-    [`Cap rate ≥ ${BENCHMARKS.capRateGood}%`]: 15,
-    [`DSCR ≥ ${BENCHMARKS.dscrMin.toFixed(2)} (lender comfort zone)`]: 15,
-    "Meets the 1% rule (rent ≥ 1% of price)": 10,
-    [`Break-even ratio ≤ ${BENCHMARKS.breakEvenRatioMax}%`]: 10,
-  };
-
-  let score = 0;
-  for (const c of criteria) {
-    if (c.pass) score += weights[c.label] ?? 0;
-  }
-
-  // Bonus points for exceeding "strong" thresholds, capped at 100.
-  if (result.cashOnCashReturnPercent >= BENCHMARKS.cashOnCashStrong) score += 5;
-  if (result.capRatePercent >= BENCHMARKS.capRateStrong) score += 5;
-  if (result.dscr >= BENCHMARKS.dscrStrong) score += 5;
-  score = Math.min(score, 100);
-
-  let label: Verdict["label"];
-  let summary: string;
-
-  if (!positiveCashFlow) {
-    label = "Pass";
-    summary =
-      "This deal loses money every month at the numbers entered. Renegotiate the price, increase the down payment, or find a way to raise rent/lower expenses before proceeding.";
-  } else if (score >= 75) {
-    label = "Strong Buy";
-    summary =
-      "This property clears the standard buy-and-hold benchmarks (cash flow, cash-on-cash, cap rate, DSCR). Confirm the rent and expense assumptions against real comps, then move forward with due diligence.";
-  } else if (score >= 50) {
-    label = "Good Investment";
-    summary =
-      "Solid on most fronts but not exceptional everywhere. Worth pursuing, especially if you can improve terms (lower price, better rate, or higher rent) or if it fits a specific strategy like appreciation or house-hacking.";
-  } else if (score >= 30) {
-    label = "Marginal — Negotiate";
-    summary =
-      "The deal is cash-flow positive but thin on cushion. Try to negotiate price/terms, verify rent and expense estimates carefully, and stress-test for vacancy or rate increases before committing.";
-  } else {
-    label = "Pass";
-    summary =
-      "Cash flow is positive but the deal underperforms most standard benchmarks. Only proceed if you have a specific thesis (forced appreciation, rezoning, strong local growth) that the numbers alone don't capture.";
-  }
-
-  return { label, score, criteria, summary };
 }
