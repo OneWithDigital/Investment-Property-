@@ -14,6 +14,16 @@
  * Zillow lookup: return a clear "not configured" result rather than
  * failing silently or throwing.
  */
+export interface ComparableProperty {
+  address: string | null;
+  price: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  squareFootage: number | null;
+  distanceMiles: number | null;
+  correlation: number | null;
+}
+
 export interface MlsLookupResult {
   configured: boolean;
   fetched: boolean;
@@ -30,6 +40,10 @@ export interface MlsLookupResult {
   squareFootage: number | null;
   propertyType: string | null;
   yearBuilt: number | null;
+  /** Comparable sales used to derive the value estimate. */
+  valueComparables: ComparableProperty[];
+  /** Comparable active/recent rental listings used to derive the rent estimate. */
+  rentComparables: ComparableProperty[];
 }
 
 const EMPTY_RESULT: Omit<MlsLookupResult, "configured" | "fetched" | "error" | "address"> = {
@@ -44,7 +58,30 @@ const EMPTY_RESULT: Omit<MlsLookupResult, "configured" | "fetched" | "error" | "
   squareFootage: null,
   propertyType: null,
   yearBuilt: null,
+  valueComparables: [],
+  rentComparables: [],
 };
+
+/**
+ * RentCast's AVM endpoints return a `comparables` array of the nearby
+ * sales/listings used to derive the estimate. Extracted defensively
+ * (optional chaining throughout) since this is a third-party response
+ * shape we don't control and don't have a live key to validate against
+ * in this environment — a malformed/absent field degrades to `null`
+ * per entry rather than breaking the whole lookup.
+ */
+function extractComparables(raw: unknown): ComparableProperty[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((c: any) => ({
+    address: typeof c?.formattedAddress === "string" ? c.formattedAddress : null,
+    price: typeof c?.price === "number" ? c.price : typeof c?.rent === "number" ? c.rent : null,
+    bedrooms: typeof c?.bedrooms === "number" ? c.bedrooms : null,
+    bathrooms: typeof c?.bathrooms === "number" ? c.bathrooms : null,
+    squareFootage: typeof c?.squareFootage === "number" ? c.squareFootage : null,
+    distanceMiles: typeof c?.distance === "number" ? c.distance : null,
+    correlation: typeof c?.correlation === "number" ? c.correlation : null,
+  }));
+}
 
 async function rentcastGet(path: string, apiKey: string, signal: AbortSignal) {
   const res = await fetch(`https://api.rentcast.io/v1${path}`, {
@@ -112,6 +149,8 @@ export async function lookupPropertyComps(address: string): Promise<MlsLookupRes
       squareFootage: value?.squareFootage ?? rent?.squareFootage ?? null,
       propertyType: value?.propertyType ?? rent?.propertyType ?? null,
       yearBuilt: value?.yearBuilt ?? null,
+      valueComparables: extractComparables(value?.comparables),
+      rentComparables: extractComparables(rent?.comparables),
     };
   } catch (err) {
     const message =

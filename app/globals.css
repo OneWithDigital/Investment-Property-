@@ -13,3 +13,24 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+.print-report {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-report,
+  .print-report * {
+    visibility: visible;
+  }
+  .print-report {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}

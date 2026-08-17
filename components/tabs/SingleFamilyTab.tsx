@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { PropertyForm } from "@/components/PropertyForm";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
+import { AnalysisToolbar } from "@/components/AnalysisToolbar";
+import { PrintableReport } from "@/components/PrintableReport";
 import { DEFAULT_INPUTS } from "@/lib/calculations";
+import { formatCurrency, formatPercent } from "@/lib/format";
+import { extractStateFromAddress, findStateFactor } from "@/lib/locationFactors";
+import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
 import type { PropertyInputs, CalculationResult, Verdict } from "@/lib/types";
 import type { StateFactor } from "@/lib/locationFactors";
 
@@ -15,11 +20,29 @@ interface AnalyzeResponse {
   error?: string;
 }
 
-export function SingleFamilyTab() {
+export function SingleFamilyTab({
+  loadAnalysisId,
+  loadNonce,
+}: {
+  loadAnalysisId?: string;
+  loadNonce?: number;
+}) {
   const [inputs, setInputs] = useState<PropertyInputs>(DEFAULT_INPUTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+
+  const loadError = useLoadSavedAnalysis(loadAnalysisId, loadNonce, (saved) => {
+    setInputs(saved.inputs);
+    const stateAbbr = extractStateFromAddress(saved.inputs.address || "");
+    setData({
+      inputs: saved.inputs,
+      result: saved.result,
+      verdict: saved.verdict,
+      stateFactor: stateAbbr ? findStateFactor(stateAbbr) : null,
+    });
+    setError(null);
+  });
 
   async function handleAnalyze() {
     setLoading(true);
@@ -65,6 +88,11 @@ export function SingleFamilyTab() {
         </div>
 
         <div>
+          {loadError && (
+            <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
+              {loadError}
+            </div>
+          )}
           {error && (
             <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
               {error}
@@ -77,11 +105,43 @@ export function SingleFamilyTab() {
             </div>
           )}
           {data && (
-            <ResultsDashboard
-              result={data.result}
-              verdict={data.verdict}
-              stateFactor={data.stateFactor}
-            />
+            <>
+              <AnalysisToolbar
+                propertyType="single-family"
+                address={data.inputs.address}
+                inputs={data.inputs}
+                result={data.result}
+                verdict={data.verdict}
+              />
+              <ResultsDashboard
+                result={data.result}
+                verdict={data.verdict}
+                stateFactor={data.stateFactor}
+              />
+              <PrintableReport
+                title="Single-Family Investment Analysis"
+                address={data.inputs.address}
+                verdict={data.verdict}
+                metrics={[
+                  { label: "Monthly cash flow", value: formatCurrency(data.result.monthlyCashFlow) },
+                  { label: "Cash-on-cash return", value: formatPercent(data.result.cashOnCashReturnPercent) },
+                  { label: "Cap rate", value: formatPercent(data.result.capRatePercent) },
+                  { label: "DSCR", value: Number.isFinite(data.result.dscr) ? data.result.dscr.toFixed(2) : "∞" },
+                  { label: "Cash needed to close", value: formatCurrency(data.result.totalCashInvested) },
+                  { label: "1% rule", value: formatPercent(data.result.onePercentRulePercent, 2) },
+                ]}
+                tableTitle={`${data.result.projection.length}-year projection`}
+                tableHeaders={["Year", "Gross rent", "NOI", "Cash flow", "Property value", "Equity"]}
+                tableRows={data.result.projection.map((p) => [
+                  String(p.year),
+                  formatCurrency(p.grossRent),
+                  formatCurrency(p.noi),
+                  formatCurrency(p.cashFlow),
+                  formatCurrency(p.propertyValue),
+                  formatCurrency(p.equity),
+                ])}
+              />
+            </>
           )}
         </div>
       </div>

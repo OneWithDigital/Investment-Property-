@@ -12,7 +12,10 @@ import type { StateFactor } from "@/lib/locationFactors";
 import { NumberField, SectionHeading } from "@/components/FieldGroup";
 import { MetricCard } from "@/components/MetricCard";
 import { VerdictBanner } from "@/components/VerdictBanner";
+import { AnalysisToolbar } from "@/components/AnalysisToolbar";
+import { PrintableReport } from "@/components/PrintableReport";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
 
 interface AnalyzeResponse {
   inputs: MultiUnitInputs;
@@ -70,11 +73,23 @@ function UnitTypeRow({
   );
 }
 
-export function MultiUnitTab() {
+export function MultiUnitTab({
+  loadAnalysisId,
+  loadNonce,
+}: {
+  loadAnalysisId?: string;
+  loadNonce?: number;
+}) {
   const [inputs, setInputs] = useState<MultiUnitInputs>(DEFAULT_MULTI_UNIT_INPUTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+
+  const loadError = useLoadSavedAnalysis(loadAnalysisId, loadNonce, (saved) => {
+    setInputs(saved.inputs);
+    setData({ inputs: saved.inputs, result: saved.result, verdict: saved.verdict, stateFactor: null });
+    setError(null);
+  });
 
   const set = <K extends keyof MultiUnitInputs>(key: K, value: MultiUnitInputs[K]) =>
     setInputs((prev) => ({ ...prev, [key]: value }));
@@ -145,7 +160,8 @@ export function MultiUnitTab() {
           <NumberField label="Purchase price" prefix="$" value={inputs.purchasePrice} onChange={(v) => set("purchasePrice", v)} step={5000} />
 
           <SectionHeading>Unit mix ({totalUnits} units)</SectionHeading>
-          <div className="space-y-2">
+          <div className="overflow-x-auto">
+          <div className="space-y-2 min-w-[380px]">
             {inputs.unitMix.map((u, i) => (
               <UnitTypeRow
                 key={i}
@@ -155,10 +171,11 @@ export function MultiUnitTab() {
                 removable={inputs.unitMix.length > 1}
               />
             ))}
-            <button type="button" onClick={addUnitType} className="text-xs font-medium text-slate-600 hover:text-slate-900">
-              + Add unit type
-            </button>
           </div>
+          </div>
+          <button type="button" onClick={addUnitType} className="text-xs font-medium text-slate-600 hover:text-slate-900">
+            + Add unit type
+          </button>
           <NumberField label="Other monthly income" prefix="$" value={inputs.otherMonthlyIncome} onChange={(v) => set("otherMonthlyIncome", v)} step={25} help="Laundry, parking, storage, fees" />
 
           <SectionHeading>Financing (commercial)</SectionHeading>
@@ -204,6 +221,11 @@ export function MultiUnitTab() {
         </div>
 
         <div>
+          {loadError && (
+            <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
+              {loadError}
+            </div>
+          )}
           {error && (
             <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
               {error}
@@ -214,7 +236,41 @@ export function MultiUnitTab() {
               Fill in the unit mix and financing details, then analyze.
             </div>
           )}
-          {data && <MultiUnitResults result={data.result} verdict={data.verdict} />}
+          {data && (
+            <>
+              <AnalysisToolbar
+                propertyType="multi-unit"
+                address={data.inputs.address}
+                inputs={data.inputs}
+                result={data.result}
+                verdict={data.verdict}
+              />
+              <MultiUnitResults result={data.result} verdict={data.verdict} />
+              <PrintableReport
+                title="Multi-Unit Investment Analysis"
+                address={data.inputs.address}
+                verdict={data.verdict}
+                metrics={[
+                  { label: "Monthly cash flow", value: formatCurrency(data.result.monthlyCashFlow) },
+                  { label: "Cash-on-cash return", value: formatPercent(data.result.cashOnCashReturnPercent) },
+                  { label: "Cap rate (going-in)", value: formatPercent(data.result.capRatePercent) },
+                  { label: "DSCR", value: Number.isFinite(data.result.dscr) ? data.result.dscr.toFixed(2) : "∞" },
+                  { label: "Price per unit", value: formatCurrency(data.result.pricePerUnit) },
+                  { label: "Expense ratio", value: formatPercent(data.result.expenseRatioPercent) },
+                ]}
+                tableTitle={`${data.result.projection.length}-year projection`}
+                tableHeaders={["Year", "GPR", "NOI", "Cash flow", "Property value", "Equity"]}
+                tableRows={data.result.projection.map((p) => [
+                  String(p.year),
+                  formatCurrency(p.grossPotentialRent),
+                  formatCurrency(p.noi),
+                  formatCurrency(p.cashFlow),
+                  formatCurrency(p.propertyValue),
+                  formatCurrency(p.equity),
+                ])}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

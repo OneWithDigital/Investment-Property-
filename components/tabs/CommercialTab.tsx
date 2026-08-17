@@ -15,7 +15,10 @@ import type { StateFactor } from "@/lib/locationFactors";
 import { NumberField, SectionHeading } from "@/components/FieldGroup";
 import { MetricCard } from "@/components/MetricCard";
 import { VerdictBanner } from "@/components/VerdictBanner";
+import { AnalysisToolbar } from "@/components/AnalysisToolbar";
+import { PrintableReport } from "@/components/PrintableReport";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
 
 interface AnalyzeResponse {
   inputs: CommercialInputs;
@@ -70,11 +73,23 @@ function TenantRow({
   );
 }
 
-export function CommercialTab() {
+export function CommercialTab({
+  loadAnalysisId,
+  loadNonce,
+}: {
+  loadAnalysisId?: string;
+  loadNonce?: number;
+}) {
   const [inputs, setInputs] = useState<CommercialInputs>(DEFAULT_COMMERCIAL_INPUTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+
+  const loadError = useLoadSavedAnalysis(loadAnalysisId, loadNonce, (saved) => {
+    setInputs(saved.inputs);
+    setData({ inputs: saved.inputs, result: saved.result, verdict: saved.verdict, stateFactor: null });
+    setError(null);
+  });
 
   const set = <K extends keyof CommercialInputs>(key: K, value: CommercialInputs[K]) =>
     setInputs((prev) => ({ ...prev, [key]: value }));
@@ -179,6 +194,8 @@ export function CommercialTab() {
           />
 
           <SectionHeading>Tenant rent roll</SectionHeading>
+          <div className="overflow-x-auto">
+          <div className="min-w-[400px]">
           <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-1.5 text-[10px] text-slate-400 px-2">
             <span>Tenant</span>
             <span className="w-20">Sqft</span>
@@ -190,10 +207,12 @@ export function CommercialTab() {
             {inputs.tenants.map((t, i) => (
               <TenantRow key={i} tenant={t} onChange={(nt) => updateTenant(i, nt)} onRemove={() => removeTenant(i)} />
             ))}
-            <button type="button" onClick={addTenant} className="text-xs font-medium text-slate-600 hover:text-slate-900">
-              + Add tenant
-            </button>
           </div>
+          </div>
+          </div>
+          <button type="button" onClick={addTenant} className="text-xs font-medium text-slate-600 hover:text-slate-900">
+            + Add tenant
+          </button>
 
           <div className="grid grid-cols-2 gap-3">
             <NumberField label="Vacant sqft" value={inputs.vacantSqft} onChange={(v) => set("vacantSqft", v)} step={100} />
@@ -240,6 +259,11 @@ export function CommercialTab() {
         </div>
 
         <div>
+          {loadError && (
+            <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
+              {loadError}
+            </div>
+          )}
           {error && (
             <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
               {error}
@@ -250,7 +274,41 @@ export function CommercialTab() {
               Fill in the tenant rent roll and financing details, then analyze.
             </div>
           )}
-          {data && <CommercialResults result={data.result} verdict={data.verdict} />}
+          {data && (
+            <>
+              <AnalysisToolbar
+                propertyType="commercial"
+                address={data.inputs.address}
+                inputs={data.inputs}
+                result={data.result}
+                verdict={data.verdict}
+              />
+              <CommercialResults result={data.result} verdict={data.verdict} />
+              <PrintableReport
+                title="Commercial Property Investment Analysis"
+                address={data.inputs.address}
+                verdict={data.verdict}
+                metrics={[
+                  { label: "Monthly cash flow", value: formatCurrency(data.result.monthlyCashFlow) },
+                  { label: "Cash-on-cash return", value: formatPercent(data.result.cashOnCashReturnPercent) },
+                  { label: "Cap rate (going-in)", value: formatPercent(data.result.capRatePercent) },
+                  { label: "DSCR", value: Number.isFinite(data.result.dscr) ? data.result.dscr.toFixed(2) : "∞" },
+                  { label: "Price / sqft", value: formatCurrency(data.result.pricePerSqft) },
+                  { label: "WALT", value: `${data.result.waltYears.toFixed(1)} yrs` },
+                ]}
+                tableTitle={`${data.result.projection.length}-year projection`}
+                tableHeaders={["Year", "Leased rent", "NOI", "Cash flow", "Property value", "Equity"]}
+                tableRows={data.result.projection.map((p) => [
+                  String(p.year),
+                  formatCurrency(p.leasedRent),
+                  formatCurrency(p.noi),
+                  formatCurrency(p.cashFlow),
+                  formatCurrency(p.propertyValue),
+                  formatCurrency(p.equity),
+                ])}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

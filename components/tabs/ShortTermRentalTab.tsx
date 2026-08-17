@@ -14,7 +14,10 @@ import { NumberField, SectionHeading } from "@/components/FieldGroup";
 import { MetricCard } from "@/components/MetricCard";
 import { VerdictBanner } from "@/components/VerdictBanner";
 import { MlsLookupButton } from "@/components/MlsLookupButton";
+import { AnalysisToolbar } from "@/components/AnalysisToolbar";
+import { PrintableReport } from "@/components/PrintableReport";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
 
 interface AnalyzeResponse {
   inputs: ShortTermRentalInputs;
@@ -24,11 +27,23 @@ interface AnalyzeResponse {
   error?: string;
 }
 
-export function ShortTermRentalTab() {
+export function ShortTermRentalTab({
+  loadAnalysisId,
+  loadNonce,
+}: {
+  loadAnalysisId?: string;
+  loadNonce?: number;
+}) {
   const [inputs, setInputs] = useState<ShortTermRentalInputs>(DEFAULT_STR_INPUTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+
+  const loadError = useLoadSavedAnalysis(loadAnalysisId, loadNonce, (saved) => {
+    setInputs(saved.inputs);
+    setData({ inputs: saved.inputs, result: saved.result, verdict: saved.verdict, stateFactor: null });
+    setError(null);
+  });
 
   const set = <K extends keyof ShortTermRentalInputs>(
     key: K,
@@ -171,6 +186,11 @@ export function ShortTermRentalTab() {
         </div>
 
         <div>
+          {loadError && (
+            <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
+              {loadError}
+            </div>
+          )}
           {error && (
             <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
               {error}
@@ -181,7 +201,46 @@ export function ShortTermRentalTab() {
               Fill in the revenue and expense assumptions, then analyze.
             </div>
           )}
-          {data && <ShortTermRentalResults result={data.result} verdict={data.verdict} inputs={data.inputs} />}
+          {data && (
+            <>
+              <AnalysisToolbar
+                propertyType="short-term-rental"
+                address={data.inputs.address}
+                inputs={data.inputs}
+                result={data.result}
+                verdict={data.verdict}
+              />
+              <ShortTermRentalResults result={data.result} verdict={data.verdict} inputs={data.inputs} />
+              <PrintableReport
+                title="Short-Term Rental Investment Analysis"
+                address={data.inputs.address}
+                verdict={data.verdict}
+                metrics={[
+                  { label: "Monthly cash flow", value: formatCurrency(data.result.monthlyCashFlow) },
+                  { label: "Cash-on-cash return", value: formatPercent(data.result.cashOnCashReturnPercent) },
+                  { label: "Cap rate", value: formatPercent(data.result.capRatePercent) },
+                  { label: "DSCR", value: Number.isFinite(data.result.dscr) ? data.result.dscr.toFixed(2) : "∞" },
+                  { label: "Cash needed to close", value: formatCurrency(data.result.totalCashInvested) },
+                  {
+                    label: "Break-even occupancy",
+                    value: Number.isFinite(data.result.breakEvenOccupancyPercent)
+                      ? formatPercent(data.result.breakEvenOccupancyPercent, 0)
+                      : "—",
+                  },
+                ]}
+                tableTitle={`${data.result.projection.length}-year projection`}
+                tableHeaders={["Year", "Booking revenue", "NOI", "Cash flow", "Property value", "Equity"]}
+                tableRows={data.result.projection.map((p) => [
+                  String(p.year),
+                  formatCurrency(p.grossRent),
+                  formatCurrency(p.noi),
+                  formatCurrency(p.cashFlow),
+                  formatCurrency(p.propertyValue),
+                  formatCurrency(p.equity),
+                ])}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

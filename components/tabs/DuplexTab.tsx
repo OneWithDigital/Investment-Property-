@@ -13,7 +13,10 @@ import { NumberField, SectionHeading } from "@/components/FieldGroup";
 import { MetricCard } from "@/components/MetricCard";
 import { VerdictBanner } from "@/components/VerdictBanner";
 import { MlsLookupButton } from "@/components/MlsLookupButton";
+import { AnalysisToolbar } from "@/components/AnalysisToolbar";
+import { PrintableReport } from "@/components/PrintableReport";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
 
 interface AnalyzeResponse {
   inputs: DuplexInputs;
@@ -74,11 +77,23 @@ function UnitRow({
   );
 }
 
-export function DuplexTab() {
+export function DuplexTab({
+  loadAnalysisId,
+  loadNonce,
+}: {
+  loadAnalysisId?: string;
+  loadNonce?: number;
+}) {
   const [inputs, setInputs] = useState<DuplexInputs>(DEFAULT_DUPLEX_INPUTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+
+  const loadError = useLoadSavedAnalysis(loadAnalysisId, loadNonce, (saved) => {
+    setInputs(saved.inputs);
+    setData({ inputs: saved.inputs, result: saved.result, verdict: saved.verdict, stateFactor: null });
+    setError(null);
+  });
 
   const set = <K extends keyof DuplexInputs>(key: K, value: DuplexInputs[K]) =>
     setInputs((prev) => ({ ...prev, [key]: value }));
@@ -187,7 +202,8 @@ export function DuplexTab() {
           </div>
 
           <SectionHeading>Units</SectionHeading>
-          <div className="space-y-2">
+          <div className="overflow-x-auto">
+          <div className="space-y-2 min-w-[360px]">
             {inputs.units.map((unit, i) => (
               <UnitRow
                 key={i}
@@ -197,14 +213,15 @@ export function DuplexTab() {
                 removable={inputs.units.length > 1}
               />
             ))}
-            <button
-              type="button"
-              onClick={addUnit}
-              className="text-xs font-medium text-slate-600 hover:text-slate-900"
-            >
-              + Add unit
-            </button>
           </div>
+          </div>
+          <button
+            type="button"
+            onClick={addUnit}
+            className="text-xs font-medium text-slate-600 hover:text-slate-900"
+          >
+            + Add unit
+          </button>
 
           {inputs.financingType === "house-hack" && (
             <NumberField
@@ -260,6 +277,11 @@ export function DuplexTab() {
         </div>
 
         <div>
+          {loadError && (
+            <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
+              {loadError}
+            </div>
+          )}
           {error && (
             <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 mb-4">
               {error}
@@ -270,7 +292,41 @@ export function DuplexTab() {
               Fill in the units and financing details, then analyze.
             </div>
           )}
-          {data && <DuplexResults result={data.result} verdict={data.verdict} inputs={data.inputs} />}
+          {data && (
+            <>
+              <AnalysisToolbar
+                propertyType="duplex"
+                address={data.inputs.address}
+                inputs={data.inputs}
+                result={data.result}
+                verdict={data.verdict}
+              />
+              <DuplexResults result={data.result} verdict={data.verdict} inputs={data.inputs} />
+              <PrintableReport
+                title="Duplex / Small Multifamily Investment Analysis"
+                address={data.inputs.address}
+                verdict={data.verdict}
+                metrics={[
+                  { label: "Monthly cash flow", value: formatCurrency(data.result.monthlyCashFlow) },
+                  { label: "Cash-on-cash return", value: formatPercent(data.result.cashOnCashReturnPercent) },
+                  { label: "Cap rate", value: formatPercent(data.result.capRatePercent) },
+                  { label: "DSCR", value: Number.isFinite(data.result.dscr) ? data.result.dscr.toFixed(2) : "∞" },
+                  { label: "Cash needed to close", value: formatCurrency(data.result.totalCashInvested) },
+                  { label: "Price per unit", value: formatCurrency(data.result.pricePerUnit) },
+                ]}
+                tableTitle={`${data.result.projection.length}-year projection`}
+                tableHeaders={["Year", "Rent collected", "NOI", "Cash flow", "Property value", "Equity"]}
+                tableRows={data.result.projection.map((p) => [
+                  String(p.year),
+                  formatCurrency(p.grossRent),
+                  formatCurrency(p.noi),
+                  formatCurrency(p.cashFlow),
+                  formatCurrency(p.propertyValue),
+                  formatCurrency(p.equity),
+                ])}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

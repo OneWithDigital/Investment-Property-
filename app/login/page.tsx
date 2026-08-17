@@ -49,7 +49,12 @@ function LoginForm() {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">Password</span>
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-slate-700">Password</span>
+            <Link href="/forgot-password" className="text-xs text-slate-500 underline underline-offset-2">
+              Forgot password?
+            </Link>
+          </div>
           <input
             type="password"
             required

@@ -6,18 +6,22 @@ property types — Single-Family, Duplex/Small Multifamily, Multi-Unit
 and buy/pass verdict, plus a Grants & Funding finder for financing new
 builds, remodels, and energy-efficiency work. Sign in, pick a tab, paste
 a Zillow URL or address (or search MLS comps), fill in the numbers, and
-get a full breakdown.
+get a full breakdown. Save analyses to build a portfolio, compare deals
+side by side, and print/export a report for each one.
 
 ## Getting started
 
 ```bash
 npm install
 cp .env.example .env   # fill in real values, especially NEXTAUTH_SECRET
-npx prisma migrate dev # creates the local SQLite database
+npx prisma migrate dev # creates the database schema (needs a running Postgres)
 npm run dev
 ```
 
 Then open http://localhost:3000, sign up for an account, and log in.
+
+Requires a Postgres database — see `.env.example` for local setup options
+(a local install, Docker, or a free hosted instance like Neon/Supabase).
 
 ## Running tests
 
@@ -29,17 +33,35 @@ Unit tests cover the shared mortgage/amortization/IRR math
 (`__tests__/calculations.test.ts`) and each property-type calculator
 (`__tests__/calc-multi-property.test.ts`) against hand-computed reference
 scenarios — including a derived break-even-occupancy formula for the STR
-calculator.
+calculator. `.github/workflows/ci.yml` runs the full test + build pipeline
+on every push and PR.
 
 ## How it works
 
 ### Auth
 Full multi-user accounts via NextAuth (credentials provider, JWT
-sessions) backed by a Prisma + SQLite `User` table (`bcryptjs` password
+sessions) backed by a Prisma + Postgres `User` table (`bcryptjs` password
 hashing). `middleware.ts` gates every route except `/login`, `/signup`,
-and the NextAuth API routes. For production, swap `DATABASE_URL` to a
-real Postgres/MySQL instance — Prisma makes that a one-line change to
-`prisma/schema.prisma`.
+`/verify-email`, `/forgot-password`, `/reset-password`, and the NextAuth
+API routes — those last three must stay reachable while logged out, since
+that's precisely how a locked-out user regains access.
+
+- **Email verification**: signup sends a verification link
+  (`lib/authEmails.ts` + `lib/tokens.ts`); a banner reminds unverified
+  users with a resend option. Login is never blocked on verification
+  status, so a misconfigured/unset email provider can't lock anyone out.
+- **Password reset**: `/forgot-password` → emailed link → `/reset-password`,
+  with single-use, time-limited tokens (1 hour) and no account-enumeration
+  leak (the endpoint always responds success).
+- **Email delivery** (`lib/email.ts`): sends real mail via SMTP when
+  `SMTP_HOST` is configured; otherwise logs the message (including the
+  verification/reset link) to the server console — the same
+  graceful-degradation pattern used for Zillow/RentCast. Dev/test works
+  end-to-end with zero email setup.
+- **Rate limiting** (`lib/rateLimit.ts`): basic in-memory limiter on
+  signup, login, password reset, and resend-verification. It's
+  single-process (documented in the file) — swap in a shared store
+  (Redis/Upstash) if you deploy multiple instances.
 
 ### The five calculators
 Each property type has its own input model, calculation engine, and
@@ -75,6 +97,21 @@ but each supplies its own benchmarks — e.g. STR requires a higher
 cash-on-cash return (12%+) than long-term rentals (8%+) to reflect the
 added operational effort and regulatory exposure.
 
+### Saved analyses, portfolio, and reports
+- **Save** any analysis from any calculator tab (`SavedAnalysis` Prisma
+  model, stores inputs/result/verdict as JSON since the five property
+  types have genuinely different shapes).
+- **Saved tab** — history of everything you've saved; click one to reload
+  it back into its calculator, rename, or delete.
+- **Portfolio tab** — every saved analysis ranked by whichever metric you
+  choose (cap rate, cash-on-cash, cash flow, DSCR), with checkboxes to
+  pull 2+ into a side-by-side comparison table.
+- **Print / Save PDF** — every result view includes a printable report
+  (`components/PrintableReport.tsx`) that renders via the browser's own
+  print engine (`window.print()` + print-only CSS in `globals.css`)
+  rather than a server-side PDF renderer — no extra runtime dependency,
+  works in any deploy environment.
+
 ### Grants & Funding finder
 `lib/grants.ts` is a curated reference of ~20 real federal (plus
 representative state/local) programs — FHA 203(k), USDA rural repair
@@ -95,9 +132,10 @@ site rather than trust a hardcoded URL).
   price/tax/rent from the listing yourself.
 - **MLS/comps** (`lib/mlsLookup.ts`) — a real (non-scraping) comps and
   valuation lookup via the [RentCast API](https://www.rentcast.io/api),
-  covering the residential tabs (Single-Family, Duplex, STR). Degrades
-  gracefully with a clear message if `RENTCAST_API_KEY` isn't configured
-  — see `.env.example`.
+  covering the residential tabs (Single-Family, Duplex, STR), including
+  an expandable list of the actual comparable sales/rentals RentCast used
+  to derive its estimate. Degrades gracefully with a clear message if
+  `RENTCAST_API_KEY` isn't configured — see `.env.example`.
 - **Location factors** (`lib/locationFactors.ts`) — state-by-state
   landlord/tenant regulatory climate (rent control, eviction speed) plus
   a due-diligence checklist covering schools, crime, job growth, flood
@@ -109,6 +147,8 @@ site rather than trust a hardcoded URL).
   on that major) and Prisma to the stable 5.x line (Prisma 7 requires a
   driver-adapter config rewrite). Both are deliberate choices for
   stability, not oversights — revisit if you want the latest major.
+- The rate limiter is in-memory/single-process — fine for one instance,
+  not sufficient for a horizontally-scaled deployment (see `lib/rateLimit.ts`).
 - MLS/comps coverage (RentCast) is residential-only; Multi-Unit and
   Commercial tabs don't have a comparable self-serve comps API, so those
   stay manual-entry.
@@ -118,3 +158,7 @@ site rather than trust a hardcoded URL).
 - Rent/price/tax data from Zillow or RentCast should always be
   spot-checked against the live listing/market before trusting the
   analysis.
+- `.npmrc` sets `legacy-peer-deps=true` — required because next-auth@4's
+  optional (unused) EmailProvider peer-depends on an old, CVE-affected
+  nodemailer range; this app's own email sending uses a patched version
+  instead. See the comment in `.npmrc` for the full explanation.
