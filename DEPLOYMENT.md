@@ -1,8 +1,8 @@
 # Deploying to your Hostinger VPS (alongside WordPress)
 
 This app is a Node.js server (Next.js + PostgreSQL). It runs as its own
-process on a subdomain (e.g. `app.financial.help`), completely separate
-from WordPress — WordPress keeps serving `financial.help` exactly as it
+process on a subdomain (e.g. `app.myfinancial.help`), completely separate
+from WordPress — WordPress keeps serving `myfinancial.help` exactly as it
 does now. Nothing here touches your WordPress install, database, or files.
 
 I can't run these commands for you — I don't have access to your VPS
@@ -74,9 +74,9 @@ Fill in `.env`:
 ```bash
 DATABASE_URL="postgresql://investment_app:CHOOSE_A_REAL_PASSWORD@localhost:5432/investment_property"
 NEXTAUTH_SECRET="<run: openssl rand -base64 32>"
-NEXTAUTH_URL="https://app.financial.help"     # your real subdomain, once DNS is set up
+NEXTAUTH_URL="https://app.myfinancial.help"     # your real subdomain, once DNS is set up
 RENTCAST_API_KEY=""                            # optional, see README
-EMAIL_FROM="Investment Property Analyzer <no-reply@financial.help>"
+EMAIL_FROM="Investment Property Analyzer <no-reply@myfinancial.help>"
 SMTP_HOST=""                                   # optional — see note below
 SMTP_PORT="587"
 SMTP_USER=""
@@ -84,7 +84,7 @@ SMTP_PASSWORD=""
 ```
 
 For `SMTP_HOST`: Hostinger's own email hosting can usually serve as an
-SMTP relay if `financial.help`'s email is hosted there too (check
+SMTP relay if `myfinancial.help`'s email is hosted there too (check
 hPanel → Emails → Connection details). Without it configured, the app
 still works — verification/reset links just get logged to the server
 console instead of emailed, which isn't useful for real users, so set
@@ -118,7 +118,7 @@ pm2 logs investment-property
 
 ## Step 6: DNS — point a subdomain at this VPS
 
-In Hostinger's DNS zone editor for `financial.help` (hPanel → Domains →
+In Hostinger's DNS zone editor for `myfinancial.help` (hPanel → Domains →
 DNS Zone), add:
 
 ```
@@ -134,19 +134,19 @@ hours.
 ## Step 7: Expose it publicly (this part depends on your panel)
 
 The goal is the same regardless of panel: reverse-proxy
-`https://app.financial.help` to `http://localhost:3001`, with SSL.
+`https://app.myfinancial.help` to `http://localhost:3001`, with SSL.
 
 ### If it's plain Nginx (no panel, or hPanel with raw Nginx)
 
 Copy `deploy/nginx-app-subdomain.conf` from this repo to
-`/etc/nginx/sites-available/app.financial.help`, edit the placeholders,
+`/etc/nginx/sites-available/app.myfinancial.help`, edit the placeholders,
 then:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/app.financial.help /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/app.myfinancial.help /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d app.financial.help
+sudo certbot --nginx -d app.myfinancial.help
 ```
 
 ### If it's CloudPanel / CyberPanel / Plesk
@@ -170,7 +170,7 @@ root access, so nothing stops you from configuring Nginx directly).
 ## Verifying it's live
 
 ```bash
-curl -I https://app.financial.help/login
+curl -I https://app.myfinancial.help/login
 ```
 
 Should return `200`. Visit it in a browser, sign up, and confirm you can
