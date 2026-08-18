@@ -1,171 +1,139 @@
-# Deploying to your Hostinger VPS (alongside WordPress)
+# Deploying to your Hostinger VPS
 
-This app is a Node.js server (Next.js + PostgreSQL). It runs as its own
-process on a subdomain (e.g. `app.myfinancial.help`), completely separate
-from WordPress — WordPress keeps serving `myfinancial.help` exactly as it
-does now. Nothing here touches your WordPress install, database, or files.
+Two facts about your actual setup that shape everything below:
 
-I can't run these commands for you — I don't have access to your VPS
-from this session. This is the exact sequence to SSH in and run yourself
-(or hand to whoever manages the server).
+1. **WordPress (myfinancial.help) is NOT on this VPS.** It's on a
+   separate Hostinger Premium Web Hosting plan. This app deploys to the
+   VPS on its own subdomain (e.g. `app.myfinancial.help`); the two are
+   connected only by a DNS record, nothing else.
+2. **The VPS is Docker-based.** Ports 80/443 are served by Nginx Proxy
+   Manager (`jc21/nginx-proxy-manager`) running in Docker, and there's
+   already a `postgres:16-alpine` container — both managed by an
+   existing compose project at `/root/automation-stack/docker-compose.yml`,
+   alongside another project at `/root/agentic_agency/docker-compose.yml`.
+   **This deployment never touches either of those files or restarts
+   anything in them.** It's its own separate compose project that joins
+   `automation-stack_database_network` — an existing Docker network — so
+   it can reach the existing Postgres container and be reached by the
+   existing Nginx Proxy Manager container, without editing either.
 
-## Step 0: Figure out what's already on the VPS
+I don't have access to this VPS from this session — everything below is
+what you (or whoever manages the server) runs over SSH.
 
-SSH in (`ssh root@your-vps-ip` or your usual user) and run:
+## What's in this repo for this
+
+- `Dockerfile` — multi-stage production build. Built and tested in a
+  sandbox mirroring this exact setup (Alpine + Postgres reachable over a
+  shared Docker network) before being handed to you — see the notes at
+  the bottom of this file for exactly what that testing did and didn't
+  cover.
+- `docker-entrypoint.sh` — runs `prisma migrate deploy` then starts the
+  app on every container start.
+- `docker-compose.yml` — the standalone project described above.
+- `.dockerignore`
+
+## Step 1: Create a database and user for this app
+
+Don't reuse the Postgres superuser. Run this on the VPS (adjust `-U
+postgres` if the existing container's superuser has a different
+username — check `/root/automation-stack/docker-compose.yml`'s postgres
+service `environment:` block, or ask whoever set it up):
 
 ```bash
-# What's serving WordPress on port 80/443?
-sudo ss -tlnp | grep -E ':80|:443'
-
-# Is there a control panel installed?
-ls /usr/local/hestia 2>/dev/null && echo "Hestia"
-ls /usr/local/CyberCP 2>/dev/null && echo "CyberPanel"
-ls /etc/cloudpanel 2>/dev/null && echo "CloudPanel"
-ls /usr/local/psa 2>/dev/null && echo "Plesk"
-which hpanel-cli 2>/dev/null && echo "hPanel VPS tools present"
-
-# What web server?
-which nginx apache2 2>/dev/null
+docker exec -it postgres psql -U postgres -c \
+  "CREATE USER investment_app WITH PASSWORD 'CHOOSE_A_REAL_PASSWORD';"
+docker exec -it postgres psql -U postgres -c \
+  "CREATE DATABASE investment_property OWNER investment_app;"
 ```
 
-This tells you which "exposing it publicly" section to use in Step 5.
-Everything before that (Steps 1-4) is the same regardless of panel.
+Pick your own password — you never need to share it with me.
 
-## Step 1: Install Node.js and PostgreSQL
-
-```bash
-# Node.js 20.x (matches what this app was built/tested against)
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# PostgreSQL
-sudo apt-get install -y postgresql postgresql-contrib
-
-# PM2 — keeps the app running, restarts it on crash/reboot
-sudo npm install -g pm2
-```
-
-If your VPS already has a control panel (CyberPanel, CloudPanel, Plesk,
-Hestia), it likely already manages PostgreSQL/MySQL and Node through its
-own UI — check there first rather than installing a second copy.
-
-## Step 2: Create the database
+## Step 2: Get the code onto the server
 
 ```bash
-sudo -u postgres psql -c "CREATE USER investment_app WITH PASSWORD 'CHOOSE_A_REAL_PASSWORD';"
-sudo -u postgres psql -c "CREATE DATABASE investment_property OWNER investment_app;"
-```
-
-## Step 3: Get the code onto the server and configure it
-
-```bash
-cd /var/www   # or wherever you keep sites outside the WordPress docroot
+cd /root   # or wherever you keep things outside automation-stack/agentic_agency
 git clone <your-repo-url> investment-property
 cd investment-property
 git checkout claude/investment-property-analyzer-6xn6w0   # or main, once merged
+```
 
-npm install
+## Step 3: Configure `.env`
+
+```bash
 cp .env.example .env
 nano .env
 ```
 
-Fill in `.env`:
-
 ```bash
-DATABASE_URL="postgresql://investment_app:CHOOSE_A_REAL_PASSWORD@localhost:5432/investment_property"
+# "postgres" here is the existing container's name — Docker's internal
+# DNS resolves it once this app joins the same network. Not "localhost".
+DATABASE_URL="postgresql://investment_app:CHOOSE_A_REAL_PASSWORD@postgres:5432/investment_property"
 NEXTAUTH_SECRET="<run: openssl rand -base64 32>"
-NEXTAUTH_URL="https://app.myfinancial.help"     # your real subdomain, once DNS is set up
+NEXTAUTH_URL="https://app.myfinancial.help"
 RENTCAST_API_KEY=""                            # optional, see README
 EMAIL_FROM="Investment Property Analyzer <no-reply@myfinancial.help>"
-SMTP_HOST=""                                   # optional — see note below
+SMTP_HOST=""                                   # optional, see README
 SMTP_PORT="587"
 SMTP_USER=""
 SMTP_PASSWORD=""
 ```
 
-For `SMTP_HOST`: Hostinger's own email hosting can usually serve as an
-SMTP relay if `myfinancial.help`'s email is hosted there too (check
-hPanel → Emails → Connection details). Without it configured, the app
-still works — verification/reset links just get logged to the server
-console instead of emailed, which isn't useful for real users, so set
-this up before letting real customers sign up.
+Without `SMTP_HOST` configured, verification/reset emails get logged to
+`docker compose logs` instead of actually sent — fine for you to test
+with, not fine for real users. Set up real SMTP before inviting anyone.
 
-## Step 4: Migrate the database and build
+## Step 4: Build and start it
 
 ```bash
-npx prisma migrate deploy
-npm run build
+docker compose build
+docker compose up -d
 ```
 
-## Step 5: Run it with PM2
-
-The repo includes `ecosystem.config.js`, already set to run on port 3001
-(change the port there if you need a different one):
+Watch it come up (should see "Applying database migrations..." then
+"Starting Next.js..." then a Next.js ready message):
 
 ```bash
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup     # follow the printed instructions to enable on-boot start
+docker compose logs -f app
 ```
 
-This runs the app on `localhost:3001` (pick any free port — just don't
-collide with whatever WordPress/Apache/other apps use). Confirm it's up:
+Confirm the container is on the right network and reachable internally:
 
 ```bash
-curl -I http://localhost:3001
-pm2 logs investment-property
+docker exec investment-property wget -qO- http://localhost:3000/login | head -5
 ```
 
-## Step 6: DNS — point a subdomain at this VPS
+If this hangs or errors, don't move on to DNS/proxy setup yet — paste me
+the output from `docker compose logs app` and we'll fix it first.
 
-In Hostinger's DNS zone editor for `myfinancial.help` (hPanel → Domains →
-DNS Zone), add:
+## Step 5: DNS — point a subdomain at this VPS
+
+In Hostinger's DNS zone editor for `myfinancial.help` (this is
+domain-level DNS management — accessible from hPanel regardless of which
+hosting product serves the root domain), add:
 
 ```
 Type: A
-Name: app          (or "tools", "investment", whatever you want)
-Value: <your VPS IP address>
+Name: app          (or "tools", "investment", whatever you prefer)
+Value: <this VPS's public IP address>
 TTL: 3600
 ```
 
-DNS propagation is usually fast on Hostinger but can take up to a few
-hours.
+## Step 6: Add the proxy host in Nginx Proxy Manager
 
-## Step 7: Expose it publicly (this part depends on your panel)
+Open NPM's admin UI at `http://<vps-ip>:81` (log in with whatever
+credentials were set up when `automation-stack` was deployed). Then:
 
-The goal is the same regardless of panel: reverse-proxy
-`https://app.myfinancial.help` to `http://localhost:3001`, with SSL.
-
-### If it's plain Nginx (no panel, or hPanel with raw Nginx)
-
-Copy `deploy/nginx-app-subdomain.conf` from this repo to
-`/etc/nginx/sites-available/app.myfinancial.help`, edit the placeholders,
-then:
-
-```bash
-sudo ln -s /etc/nginx/sites-available/app.myfinancial.help /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d app.myfinancial.help
-```
-
-### If it's CloudPanel / CyberPanel / Plesk
-
-Each of these has a "create a new site" flow in its UI for the
-subdomain, with a "reverse proxy" or "Node.js app" option — point it at
-`http://127.0.0.1:3001`, then use the panel's built-in Let's Encrypt/SSL
-button. The Nginx config in `deploy/nginx-app-subdomain.conf` is a
-useful reference for what the proxy directives should look like even if
-you're setting it up through a UI instead of the raw file.
-
-### If it's Hostinger's own hPanel VPS website manager
-
-hPanel VPS has a "Websites" section where you can add a new site/domain
-and, depending on your VPS OS image, a Node.js application option. If
-that's available, point it at this app's directory and let it manage
-the process instead of PM2. If it only offers static/PHP sites, fall
-back to the plain-Nginx path above (hPanel VPS still gives you full SSH
-root access, so nothing stops you from configuring Nginx directly).
+1. **Hosts → Proxy Hosts → Add Proxy Host**
+2. **Domain Names**: `app.myfinancial.help`
+3. **Scheme**: `http`
+4. **Forward Hostname / IP**: `investment-property` — this resolves
+   because the app container and NPM are on the same
+   `automation-stack_database_network`
+5. **Forward Port**: `3000`
+6. Turn on **Block Common Exploits**
+7. **SSL tab** → Request a new SSL Certificate → enable **Force SSL** →
+   Save. NPM handles Let's Encrypt issuance/renewal automatically; no
+   certbot needed.
 
 ## Verifying it's live
 
@@ -173,26 +141,66 @@ root access, so nothing stops you from configuring Nginx directly).
 curl -I https://app.myfinancial.help/login
 ```
 
-Should return `200`. Visit it in a browser, sign up, and confirm you can
-log in and run an analysis.
+Should return `200`. Visit it in a browser, sign up, run an analysis.
 
 ## Keeping it updated later
 
 ```bash
-cd /var/www/investment-property
+cd /root/investment-property
 git pull
-npm install
-npx prisma migrate deploy
-npm run build
-pm2 restart investment-property
+docker compose build
+docker compose up -d
 ```
+
+`docker-entrypoint.sh` re-runs migrations on every start, so this alone
+picks up new database changes too.
+
+## What was actually tested before this was handed to you
+
+Built and ran this Dockerfile + compose setup in a sandbox against a
+`postgres:16-alpine` container on a Docker network named
+`automation-stack_database_network` — deliberately mirroring your real
+setup. That process caught and fixed three real bugs before you ever saw
+this file:
+
+1. The Dockerfile tried to copy a `public/` directory that didn't exist
+   in this repo (now added, with a placeholder).
+2. `package.json`'s `postinstall` hook (`prisma generate`) was failing
+   inside the Docker build because the layer-caching structure copies
+   `package.json` before the rest of the source — fixed with
+   `npm ci --ignore-scripts` plus an explicit `prisma generate` once the
+   full source is present.
+3. `node:20-alpine` ships no OpenSSL, which breaks Prisma's engine
+   auto-detection — fixed with `apk add --no-cache openssl` (Prisma's
+   own documented fix for this exact error).
+
+What I could **not** fully verify end-to-end in that sandbox: this
+sandbox's own outbound network goes through a TLS-intercepting proxy for
+unrelated reasons, which blocks Alpine's `apk` package manager
+specifically (a sandbox-only restriction — `apk add` doesn't trust that
+proxy's certificate, and there's no reasonable way to route around that
+without meddling with the sandbox in ways irrelevant to your VPS). That
+blocked a full clean containerized run of the final `apk add openssl`
+fix. I'm confident in the fix itself — it's Prisma's own documented
+solution, and it's an extremely standard, widely-used line in production
+Alpine Dockerfiles — but "confident because it's well-established" is a
+different thing than "watched it succeed end-to-end," and I want to be
+honest about which one this is. If `docker compose up -d` in Step 4
+doesn't come up cleanly, that's the first thing to check, and I'm ready
+to debug it with you against the actual logs.
+
+## Alternative: deploying without Docker
+
+If you ever deploy this to a different, non-Docker VPS, see
+`deploy/bare-metal/` for a PM2 + plain-Nginx path instead — not relevant
+to `srv1677419`, kept here in case this repo is ever deployed elsewhere.
 
 ## What this does NOT do yet
 
 This deploys the app standalone, reachable at its own subdomain with its
-own login system — completely separate from WordPress. It does **not**
-connect it to any WordPress paywall/membership plugin. That's a
-separate, deliberate decision (see the note in the main README and the
-earlier conversation about Stripe-in-the-app vs. bridging WordPress
-membership) — say the word when you're ready to tackle that and I'll
-scope it properly rather than bolt it on as an afterthought here.
+own login system — completely separate from WordPress (which, to
+reiterate, isn't even on this server). It does **not** connect to any
+WordPress paywall/membership system. That's a separate, deliberate
+decision — Stripe billing built directly into this app vs. bridging
+WordPress membership status across — flagged earlier and still open.
+Say the word when you're ready to tackle it.

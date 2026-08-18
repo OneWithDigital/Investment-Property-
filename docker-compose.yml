@@ -1,0 +1,23 @@
+# Standalone compose project for the Investment Property Analyzer.
+# Deliberately separate from /root/automation-stack/docker-compose.yml —
+# this does not modify or restart anything in that stack. It only joins
+# automation-stack_database_network (already created by that stack) so
+# it can reach the existing `postgres` container and be reachable by
+# the existing `nginx-proxy-manager` container, which is also on that
+# network. See DEPLOYMENT.md.
+
+services:
+  app:
+    build: .
+    container_name: investment-property
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - automation-stack_database_network
+    expose:
+      - "3000"
+
+networks:
+  automation-stack_database_network:
+    external: true
