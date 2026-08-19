@@ -31,9 +31,11 @@ export const config = {
      *   stay reachable while logged out; they're precisely how a
      *   logged-out (or newly-signed-up, not-yet-verified) user regains
      *   access, so gating them behind auth would be self-defeating.
+     * - /privacy, /terms — legal pages must be readable by anyone
+     *   deciding whether to sign up, not just existing users.
      * - /api/auth/* (NextAuth + signup + verification/reset endpoints)
      * - Next.js internals and static assets
      */
-    "/((?!login|signup|verify-email|forgot-password|reset-password|api/auth|_next/static|_next/image|favicon.ico|$).*)",
+    "/((?!login|signup|verify-email|forgot-password|reset-password|privacy|terms|api/auth|_next/static|_next/image|favicon.ico|$).*)",
   ],
 };

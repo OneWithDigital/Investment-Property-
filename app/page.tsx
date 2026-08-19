@@ -341,6 +341,14 @@ export default function LandingPage() {
 
         <footer className="border-t border-slate-200 py-8 text-center text-xs text-slate-400">
           <p>Investment Property Analyzer — built by One With Digital.</p>
+          <p className="mt-2 flex justify-center gap-4">
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-slate-600">
+              Privacy
+            </Link>
+            <Link href="/terms" className="underline underline-offset-2 hover:text-slate-600">
+              Terms
+            </Link>
+          </p>
         </footer>
       </div>
     </div>
