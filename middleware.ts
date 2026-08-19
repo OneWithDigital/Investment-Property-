@@ -18,6 +18,14 @@ export const config = {
   matcher: [
     /*
      * Protect everything except:
+     * - "/" — the public marketing landing page (app/page.tsx). The
+     *   actual tool lives at /dashboard, which stays protected; "/" and
+     *   "/dashboard" are deliberately different routes so a logged-out
+     *   visitor gets a sales pitch instead of a redirect straight to
+     *   /login. The trailing `|$` alternative below is what excludes
+     *   *only* the exact root path, not everything under it — without
+     *   it, "/dashboard" would also match "starts with nothing" and slip
+     *   through unprotected.
      * - /login, /signup (auth pages)
      * - /verify-email, /forgot-password, /reset-password — these MUST
      *   stay reachable while logged out; they're precisely how a
@@ -26,6 +34,6 @@ export const config = {
      * - /api/auth/* (NextAuth + signup + verification/reset endpoints)
      * - Next.js internals and static assets
      */
-    "/((?!login|signup|verify-email|forgot-password|reset-password|api/auth|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|signup|verify-email|forgot-password|reset-password|api/auth|_next/static|_next/image|favicon.ico|$).*)",
   ],
 };

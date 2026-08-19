@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // from reaching /admin — a route handler should never rely solely on
   // middleware having run the way it expects.
   if (session.user.role !== "ADMIN") {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return (

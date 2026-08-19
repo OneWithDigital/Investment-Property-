@@ -38,13 +38,20 @@ on every push and PR.
 
 ## How it works
 
-### Auth
+### Landing page and auth
+`/` (`app/page.tsx`) is a public marketing page — no session required —
+that pitches the tool and sends visitors to `/signup` or `/login`. The
+actual app lives at `/dashboard`, kept as a separate route specifically
+so a logged-out visitor lands on a sales pitch instead of getting bounced
+straight to a login form. `middleware.ts` reflects that split: it gates
+every route except `/` itself, `/login`, `/signup`, `/verify-email`,
+`/forgot-password`, `/reset-password`, and the NextAuth API routes — the
+last three must stay reachable while logged out, since that's precisely
+how a locked-out user regains access.
+
 Full multi-user accounts via NextAuth (credentials provider, JWT
 sessions) backed by a Prisma + Postgres `User` table (`bcryptjs` password
-hashing). `middleware.ts` gates every route except `/login`, `/signup`,
-`/verify-email`, `/forgot-password`, `/reset-password`, and the NextAuth
-API routes — those last three must stay reachable while logged out, since
-that's precisely how a locked-out user regains access.
+hashing).
 
 - **Email verification**: signup sends a verification link
   (`lib/authEmails.ts` + `lib/tokens.ts`); a banner reminds unverified
@@ -62,6 +69,12 @@ that's precisely how a locked-out user regains access.
   signup, login, password reset, and resend-verification. It's
   single-process (documented in the file) — swap in a shared store
   (Redis/Upstash) if you deploy multiple instances.
+- **Bot hardening on signup** (`lib/botCheck.ts`): now that `/signup` is
+  reachable from a public landing page rather than sitting behind a login
+  wall, it's a more exposed spam target. A hidden honeypot field
+  (`components/HoneypotField.tsx`) plus a minimum form-fill-time check
+  catch unsophisticated scripted signups without a captcha; combined with
+  the existing per-IP rate limit above.
 
 ### The five calculators
 Each property type has its own input model, calculation engine, and

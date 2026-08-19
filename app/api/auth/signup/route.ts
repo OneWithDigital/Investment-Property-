@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { sendVerificationEmail } from "@/lib/authEmails";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
 import { getAppSetting } from "@/lib/appSettings";
+import { isLikelyBot } from "@/lib/botCheck";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -25,6 +26,13 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null);
+
+  if (isLikelyBot({ honeypot: body?.honeypot, formRenderedAt: body?.formRenderedAt })) {
+    // Same generic error a real validation failure would show — a
+    // bot-specific message just tells the bot what to fix.
+    return NextResponse.json({ error: "Something went wrong creating your account." }, { status: 400 });
+  }
+
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body?.password === "string" ? body.password : "";
   const name = typeof body?.name === "string" ? body.name.trim() : "";
