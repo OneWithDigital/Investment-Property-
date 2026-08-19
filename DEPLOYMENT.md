@@ -70,6 +70,7 @@ nano .env
 DATABASE_URL="postgresql://investment_app:CHOOSE_A_REAL_PASSWORD@postgres:5432/investment_property"
 NEXTAUTH_SECRET="<run: openssl rand -base64 32>"
 NEXTAUTH_URL="https://app.myfinancial.help"
+ADMIN_EMAILS="you@myfinancial.help"            # promotes this email to admin on next login, see README
 RENTCAST_API_KEY=""                            # optional, see README
 EMAIL_FROM="Investment Property Analyzer <no-reply@myfinancial.help>"
 SMTP_HOST=""                                   # optional, see README

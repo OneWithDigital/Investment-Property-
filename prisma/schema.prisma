@@ -15,12 +15,21 @@ enum PropertyType {
   SHORT_TERM_RENTAL
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id                  String                @id @default(cuid())
   name                String?
   email               String                @unique
   hashedPassword      String
   emailVerified       DateTime?
+  role                Role                  @default(USER)
+  /// Set when an admin disables this account; login is blocked while set.
+  /// Kept separate from deletion so the account and its data survive.
+  disabledAt          DateTime?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   savedAnalyses       SavedAnalysis[]
@@ -64,4 +73,43 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+/// Generic key/value store for non-secret app configuration, editable from
+/// the admin Settings page. Secrets (API keys, SMTP credentials) stay in
+/// env vars — see README — this is only for things safe to store in the DB.
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+enum AdPlacementType {
+  AFFILIATE_LINK
+  ADVERTISEMENT
+}
+
+/// Reserved for future affiliate links / ad placements. Managed from the
+/// admin Monetization page, but nothing in the app renders these yet —
+/// `active` defaults to false so creating one has no visible effect until
+/// a display slot is built and wired up.
+model AdPlacement {
+  id          String          @id @default(cuid())
+  type        AdPlacementType
+  /// Free-text slot identifier (e.g. "results-footer", "sidebar") that a
+  /// future rendering component will key off of. Not an enum so new slots
+  /// don't require a migration.
+  slot        String
+  title       String
+  body        String?
+  url         String
+  imageUrl    String?
+  active      Boolean         @default(false)
+  sortOrder   Int             @default(0)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([slot, active])
 }

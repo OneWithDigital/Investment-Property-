@@ -1,9 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
+import { useSignOutIfDisabled } from "@/lib/useSignOutIfDisabled";
 
 export function Header() {
   const { data: session } = useSession();
+  useSignOutIfDisabled();
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -23,6 +26,14 @@ export function Header() {
             <span className="hidden text-sm text-slate-500 sm:inline">
               {session.user.name || session.user.email}
             </span>
+          )}
+          {session?.user?.role === "ADMIN" && (
+            <Link
+              href="/admin"
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Admin
+            </Link>
           )}
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}

@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { sendVerificationEmail } from "@/lib/authEmails";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
+import { getAppSetting } from "@/lib/appSettings";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,6 +14,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Too many signup attempts. Try again later." },
       { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
+
+  if (!(await getAppSetting("signupsEnabled"))) {
+    return NextResponse.json(
+      { error: "New signups are temporarily disabled. Please check back later." },
+      { status: 403 }
     );
   }
 

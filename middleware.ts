@@ -1,4 +1,18 @@
-export { default } from "next-auth/middleware";
+import { withAuth } from "next-auth/middleware";
+
+export default withAuth({
+  callbacks: {
+    authorized: ({ token, req }) => {
+      // /admin and /api/admin need the ADMIN role, not just a session.
+      // Every admin API route also re-checks this server-side via
+      // lib/adminAuth.ts — this is defense in depth, not the only gate.
+      if (req.nextUrl.pathname.startsWith("/admin") || req.nextUrl.pathname.startsWith("/api/admin")) {
+        return token?.role === "ADMIN";
+      }
+      return !!token;
+    },
+  },
+});
 
 export const config = {
   matcher: [

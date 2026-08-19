@@ -112,6 +112,42 @@ added operational effort and regulatory exposure.
   rather than a server-side PDF renderer — no extra runtime dependency,
   works in any deploy environment.
 
+### Admin section
+A `role` field (`USER` / `ADMIN`) on `User` gates `/admin` — enforced in
+`middleware.ts` (redirects non-admins before the page even renders) and
+again server-side in every `/api/admin/*` route (`lib/adminAuth.ts`),
+since middleware alone is routing-layer defense, not something a route
+handler should assume ran correctly.
+
+- **Bootstrapping the first admin**: there's no UI for this (nothing can
+  create the first admin from inside a system that requires an admin to
+  use it). Instead, list trusted emails in `ADMIN_EMAILS` — a
+  comma-separated env var. Anyone signing in with a matching email is
+  promoted to `ADMIN` in the database on that login. After that, the DB
+  role is the source of truth; promote/demote other users from the admin
+  Users page. See `.env.example`.
+- **Users** (`/admin/users`) — list all accounts, promote/revoke admin,
+  disable/enable (blocks login without deleting their data), or delete
+  outright (cascades to their saved analyses). An admin can't change their
+  own role/disabled state or delete themselves from this panel — that's a
+  self-lockout footgun with no one else around to undo it.
+- **Analyses** (`/admin/analyses`) — every saved analysis across every
+  user, searchable by label/address/owner email. Read-only.
+- **Settings** (`/admin/settings`) — a small `AppSetting` key/value table
+  for non-secret, DB-editable toggles (currently just "allow new
+  signups"). **API keys and other secrets are deliberately not managed
+  here** — they stay in env vars (see Overview tab for what's configured,
+  `.env.example`/README for how to set them). A DB-backed secrets UI
+  needs encryption-at-rest and audit logging to not be a downgrade from
+  "SSH in and edit `.env`," which isn't worth it unless non-technical
+  staff need to rotate keys without deploy access.
+- **Monetization** (`/admin/monetization`) — CRUD for `AdPlacement`
+  records (affiliate links / ads), reserved for future use per product
+  request. This manages data only; nothing in the app renders these yet,
+  and new placements default to inactive. Building the actual display
+  slots (where an ad/affiliate link shows up in the calculator UI) is
+  follow-up work, not done here.
+
 ### Grants & Funding finder
 `lib/grants.ts` is a curated reference of ~20 real federal (plus
 representative state/local) programs — FHA 203(k), USDA rural repair
