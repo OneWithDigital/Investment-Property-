@@ -141,6 +141,15 @@ non-base scenario is selected labels the report with which scenario
 it reflects, so a printed downside case can't be mistaken for the
 as-entered numbers.
 
+**Loan points** — an optional `loanPointsPercent` field on every
+calculator's Purchase & Financing section, alongside closing costs. Adds
+`loanAmount × points%` to cash needed to close as its own line item
+(`loanPointsCost`), separate from closing costs since lenders often quote
+them separately on a loan estimate. Points are a one-time cost, so they
+affect cash-to-close and cash-on-cash return but not monthly cash flow or
+DSCR — this tool doesn't model buying down the rate with points, only the
+upfront fee.
+
 ### Saved analyses, portfolio, and reports
 - **Save** any analysis from any calculator tab (`SavedAnalysis` Prisma
   model, stores inputs/result/verdict as JSON since the five property

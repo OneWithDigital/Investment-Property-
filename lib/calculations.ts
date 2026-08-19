@@ -110,7 +110,9 @@ export function analyzeProperty(inputs: PropertyInputs): CalculationResult {
   const loanAmount = inputs.purchasePrice - downPaymentAmount;
   const closingCosts =
     inputs.purchasePrice * (inputs.closingCostPercent / 100);
-  const totalCashInvested = downPaymentAmount + closingCosts + inputs.rehabCost;
+  const loanPointsCost = loanAmount * (inputs.loanPointsPercent / 100);
+  const totalCashInvested =
+    downPaymentAmount + closingCosts + loanPointsCost + inputs.rehabCost;
 
   const pAndI = monthlyPrincipalAndInterest(
     loanAmount,
@@ -264,6 +266,7 @@ export function analyzeProperty(inputs: PropertyInputs): CalculationResult {
     loanAmount,
     downPaymentAmount,
     closingCosts,
+    loanPointsCost,
     totalCashInvested,
 
     monthlyPrincipalAndInterest: pAndI,
@@ -310,6 +313,7 @@ export const DEFAULT_INPUTS: PropertyInputs = {
   interestRatePercent: 6.75,
   loanTermYears: 30,
   closingCostPercent: 3,
+  loanPointsPercent: 0,
   rehabCost: 0,
 
   monthlyRent: 2600,

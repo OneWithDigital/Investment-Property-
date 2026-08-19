@@ -32,6 +32,10 @@ export const FIELD_HELP = {
     title: "Closing costs",
     body: "Lender fees, title insurance, escrow, recording fees, and similar one-time costs to close the purchase. Typically runs 2–5% of the purchase price — get a loan estimate from your lender rather than guessing.",
   },
+  loanPoints: {
+    title: "Loan points",
+    body: "An upfront fee paid to the lender at closing, quoted as a % of the loan amount (1 point = 1% of the loan). Separate from closing costs above — some lenders quote them together, some separately. Leave at 0 unless your loan estimate actually shows a points/origination charge; this doesn't lower your rate here, it's just an added cash-to-close cost.",
+  },
   rehabCost: {
     title: "Rehab / repair budget",
     body: "One-time money spent getting the property rent-ready or fixing deferred maintenance before/at move-in. This adds to your total cash needed to close, but isn't an ongoing expense.",

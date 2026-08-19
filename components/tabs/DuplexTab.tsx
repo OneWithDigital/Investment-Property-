@@ -255,6 +255,7 @@ export function DuplexTab({
             <NumberField label="Interest rate" suffix="%" value={inputs.interestRatePercent} onChange={(v) => set("interestRatePercent", v)} step={0.125} info={FIELD_HELP.interestRate} />
             <NumberField label="Loan term" suffix="yrs" value={inputs.loanTermYears} onChange={(v) => set("loanTermYears", v)} step={1} info={FIELD_HELP.loanTerm} />
             <NumberField label="Closing costs" suffix="%" value={inputs.closingCostPercent} onChange={(v) => set("closingCostPercent", v)} step={0.5} info={FIELD_HELP.closingCosts} />
+            <NumberField label="Loan points" suffix="%" value={inputs.loanPointsPercent} onChange={(v) => set("loanPointsPercent", v)} step={0.25} info={FIELD_HELP.loanPoints} />
             <NumberField label="Rehab budget" prefix="$" value={inputs.rehabCost} onChange={(v) => set("rehabCost", v)} step={500} info={FIELD_HELP.rehabCost} />
           </div>
 
@@ -398,7 +399,7 @@ function DuplexResults({
         <MetricCard label="Cash-on-cash return" value={formatPercent(result.cashOnCashReturnPercent)} tone={result.cashOnCashReturnPercent >= 8 ? "positive" : "negative"} info={RESULT_HELP.cashOnCash} />
         <MetricCard label="Cap rate" value={formatPercent(result.capRatePercent)} tone={result.capRatePercent >= 6 ? "positive" : "negative"} info={RESULT_HELP.capRate} />
         <MetricCard label="DSCR" value={Number.isFinite(result.dscr) ? result.dscr.toFixed(2) : "∞"} tone={result.dscr >= 1.25 ? "positive" : "negative"} info={RESULT_HELP.dscr} />
-        <MetricCard label="Cash needed to close" value={formatCurrency(result.totalCashInvested)} />
+        <MetricCard label="Cash needed to close" value={formatCurrency(result.totalCashInvested)} help="Down payment + closing costs + points + rehab" />
         <MetricCard label="1% rule (full market rent)" value={formatPercent(result.onePercentRulePercent, 2)} tone={result.onePercentRulePercent >= 1 ? "positive" : "negative"} />
         <MetricCard label="Price per unit" value={formatCurrency(result.pricePerUnit)} info={RESULT_HELP.pricePerUnit} />
         <MetricCard label="Break-even ratio" value={formatPercent(result.breakEvenRatioPercent)} tone={result.breakEvenRatioPercent <= 85 ? "positive" : "negative"} info={RESULT_HELP.breakEvenRatio} />

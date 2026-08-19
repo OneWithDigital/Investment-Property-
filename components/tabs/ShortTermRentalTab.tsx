@@ -150,6 +150,7 @@ export function ShortTermRentalTab({
             <NumberField label="Interest rate" suffix="%" value={inputs.interestRatePercent} onChange={(v) => set("interestRatePercent", v)} step={0.125} info={FIELD_HELP.interestRate} />
             <NumberField label="Loan term" suffix="yrs" value={inputs.loanTermYears} onChange={(v) => set("loanTermYears", v)} step={1} info={FIELD_HELP.loanTerm} />
             <NumberField label="Closing costs" suffix="%" value={inputs.closingCostPercent} onChange={(v) => set("closingCostPercent", v)} step={0.5} info={FIELD_HELP.closingCosts} />
+            <NumberField label="Loan points" suffix="%" value={inputs.loanPointsPercent} onChange={(v) => set("loanPointsPercent", v)} step={0.25} info={FIELD_HELP.loanPoints} />
             <NumberField label="Furnishing / setup" prefix="$" value={inputs.furnishingSetupCost} onChange={(v) => set("furnishingSetupCost", v)} step={500} help="Furniture, decor, kitchen setup, photos" />
           </div>
 
@@ -295,7 +296,7 @@ function ShortTermRentalResults({
         <MetricCard label="Cash-on-cash return" value={formatPercent(result.cashOnCashReturnPercent)} tone={result.cashOnCashReturnPercent >= 12 ? "positive" : "negative"} help="STR target: 12%+" info={RESULT_HELP.cashOnCash} />
         <MetricCard label="Cap rate" value={formatPercent(result.capRatePercent)} tone={result.capRatePercent >= 6 ? "positive" : "negative"} info={RESULT_HELP.capRate} />
         <MetricCard label="DSCR" value={Number.isFinite(result.dscr) ? result.dscr.toFixed(2) : "∞"} tone={result.dscr >= 1.25 ? "positive" : "negative"} info={RESULT_HELP.dscr} />
-        <MetricCard label="Cash needed to close" value={formatCurrency(result.totalCashInvested)} help="Down + closing + furnishing" />
+        <MetricCard label="Cash needed to close" value={formatCurrency(result.totalCashInvested)} help="Down + closing + points + furnishing" />
         <MetricCard
           label="Break-even occupancy"
           value={Number.isFinite(result.breakEvenOccupancyPercent) ? formatPercent(result.breakEvenOccupancyPercent, 0) : "—"}

@@ -108,6 +108,25 @@ describe("analyzeDuplex — house-hack scenario", () => {
   });
 });
 
+describe("analyzeDuplex — loan points", () => {
+  it("adds points cost (% of loan amount) to cash needed to close", () => {
+    const base: DuplexInputs = {
+      ...DEFAULT_DUPLEX_INPUTS,
+      financingType: "investor",
+      purchasePrice: 300000,
+      downPaymentPercent: 20,
+      loanPointsPercent: 1.5,
+    };
+    const result = analyzeDuplex(base);
+    // loan amount = 240,000; 1.5 points = $3,600
+    expect(result.loanPointsCost).toBeCloseTo(3600, 6);
+    expect(result.totalCashInvested).toBeCloseTo(
+      result.downPaymentAmount + result.closingCosts + 3600 + base.rehabCost,
+      6
+    );
+  });
+});
+
 describe("analyzeMultiUnit — priced exactly at market cap rate", () => {
   const inputs: MultiUnitInputs = {
     ...DEFAULT_MULTI_UNIT_INPUTS,

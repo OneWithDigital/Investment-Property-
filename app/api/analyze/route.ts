@@ -12,6 +12,7 @@ const NUMERIC_FIELDS: (keyof PropertyInputs)[] = [
   "interestRatePercent",
   "loanTermYears",
   "closingCostPercent",
+  "loanPointsPercent",
   "rehabCost",
   "monthlyRent",
   "otherMonthlyIncome",

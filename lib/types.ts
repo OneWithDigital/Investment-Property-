@@ -5,6 +5,7 @@ export interface PropertyInputs {
   interestRatePercent: number; // annual, 0-100
   loanTermYears: number;
   closingCostPercent: number; // 0-100, % of purchase price
+  loanPointsPercent: number; // 0-100, upfront lender fee as % of loan amount
   rehabCost: number;
 
   monthlyRent: number;
@@ -53,6 +54,7 @@ export interface CalculationResult {
   loanAmount: number;
   downPaymentAmount: number;
   closingCosts: number;
+  loanPointsCost: number;
   totalCashInvested: number;
 
   monthlyPrincipalAndInterest: number;

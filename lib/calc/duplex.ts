@@ -22,6 +22,7 @@ export interface DuplexInputs {
   interestRatePercent: number;
   loanTermYears: number;
   closingCostPercent: number;
+  loanPointsPercent: number;
   rehabCost: number;
 
   units: RentalUnit[];
@@ -53,6 +54,7 @@ export interface DuplexResult {
   loanAmount: number;
   downPaymentAmount: number;
   closingCosts: number;
+  loanPointsCost: number;
   totalCashInvested: number;
 
   monthlyPrincipalAndInterest: number;
@@ -112,7 +114,8 @@ export function analyzeDuplex(inputs: DuplexInputs): DuplexResult {
   const downPaymentAmount = inputs.purchasePrice * (inputs.downPaymentPercent / 100);
   const loanAmount = inputs.purchasePrice - downPaymentAmount;
   const closingCosts = inputs.purchasePrice * (inputs.closingCostPercent / 100);
-  const totalCashInvested = downPaymentAmount + closingCosts + inputs.rehabCost;
+  const loanPointsCost = loanAmount * (inputs.loanPointsPercent / 100);
+  const totalCashInvested = downPaymentAmount + closingCosts + loanPointsCost + inputs.rehabCost;
 
   const pAndI = monthlyPrincipalAndInterest(
     loanAmount,
@@ -234,6 +237,7 @@ export function analyzeDuplex(inputs: DuplexInputs): DuplexResult {
     loanAmount,
     downPaymentAmount,
     closingCosts,
+    loanPointsCost,
     totalCashInvested,
     monthlyPrincipalAndInterest: pAndI,
     totalMonthlyOperatingExpenses: opEx,
@@ -356,6 +360,7 @@ export const DEFAULT_DUPLEX_INPUTS: DuplexInputs = {
   interestRatePercent: 6.75,
   loanTermYears: 30,
   closingCostPercent: 3,
+  loanPointsPercent: 0,
   rehabCost: 0,
 
   units: [

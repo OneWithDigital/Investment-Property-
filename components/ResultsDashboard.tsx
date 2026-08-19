@@ -56,7 +56,7 @@ export function ResultsDashboard({
         <MetricCard
           label="Cash needed to close"
           value={formatCurrency(result.totalCashInvested)}
-          help="Down payment + closing costs + rehab"
+          help="Down payment + closing costs + points + rehab"
         />
         <MetricCard
           label="1% rule"

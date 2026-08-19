@@ -151,6 +151,36 @@ describe("analyzeProperty — financed purchase", () => {
   });
 });
 
+describe("analyzeProperty — loan points", () => {
+  it("defaults to zero points cost, unchanged cash needed to close", () => {
+    const inputs: PropertyInputs = { ...DEFAULT_INPUTS, purchasePrice: 300000, downPaymentPercent: 20 };
+    const result = analyzeProperty(inputs);
+    expect(result.loanPointsCost).toBe(0);
+  });
+
+  it("adds points cost (% of loan amount) to cash needed to close, not the down payment", () => {
+    const withoutPoints = analyzeProperty({
+      ...DEFAULT_INPUTS,
+      purchasePrice: 300000,
+      downPaymentPercent: 20,
+      loanPointsPercent: 0,
+    });
+    const withPoints = analyzeProperty({
+      ...DEFAULT_INPUTS,
+      purchasePrice: 300000,
+      downPaymentPercent: 20,
+      loanPointsPercent: 2,
+    });
+    // loan amount = 240,000; 2 points = $4,800
+    expect(withPoints.loanPointsCost).toBeCloseTo(4800, 6);
+    expect(withPoints.downPaymentAmount).toBeCloseTo(withoutPoints.downPaymentAmount, 6);
+    expect(withPoints.totalCashInvested).toBeCloseTo(withoutPoints.totalCashInvested + 4800, 6);
+    // Points are a one-time closing cost, not a recurring expense —
+    // monthly cash flow shouldn't change.
+    expect(withPoints.monthlyCashFlow).toBeCloseTo(withoutPoints.monthlyCashFlow, 6);
+  });
+});
+
 describe("analyzeProperty — negative cash flow deal", () => {
   it("flags negative monthly cash flow when expenses exceed income", () => {
     const inputs: PropertyInputs = {

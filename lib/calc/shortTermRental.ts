@@ -26,6 +26,7 @@ export interface ShortTermRentalInputs {
   interestRatePercent: number;
   loanTermYears: number;
   closingCostPercent: number;
+  loanPointsPercent: number;
   furnishingSetupCost: number;
 
   averageDailyRate: number;
@@ -75,6 +76,7 @@ export interface ShortTermRentalResult {
   loanAmount: number;
   downPaymentAmount: number;
   closingCosts: number;
+  loanPointsCost: number;
   totalCashInvested: number;
   monthlyPrincipalAndInterest: number;
   monthlyCashFlow: number;
@@ -166,7 +168,8 @@ export function analyzeShortTermRental(
   const downPaymentAmount = inputs.purchasePrice * (inputs.downPaymentPercent / 100);
   const loanAmount = inputs.purchasePrice - downPaymentAmount;
   const closingCosts = inputs.purchasePrice * (inputs.closingCostPercent / 100);
-  const totalCashInvested = downPaymentAmount + closingCosts + inputs.furnishingSetupCost;
+  const loanPointsCost = loanAmount * (inputs.loanPointsPercent / 100);
+  const totalCashInvested = downPaymentAmount + closingCosts + loanPointsCost + inputs.furnishingSetupCost;
 
   const pAndI = monthlyPrincipalAndInterest(
     loanAmount,
@@ -288,6 +291,7 @@ export function analyzeShortTermRental(
     loanAmount,
     downPaymentAmount,
     closingCosts,
+    loanPointsCost,
     totalCashInvested,
     monthlyPrincipalAndInterest: pAndI,
     monthlyCashFlow,
@@ -389,6 +393,7 @@ export const DEFAULT_STR_INPUTS: ShortTermRentalInputs = {
   interestRatePercent: 7,
   loanTermYears: 30,
   closingCostPercent: 3,
+  loanPointsPercent: 0,
   furnishingSetupCost: 25000,
 
   averageDailyRate: 220,

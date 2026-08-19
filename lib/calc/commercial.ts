@@ -57,6 +57,7 @@ export interface CommercialInputs {
   amortizationYears: number;
   loanTermYears: number;
   closingCostPercent: number;
+  loanPointsPercent: number;
   rehabCost: number;
 
   propertyTaxAnnual: number;
@@ -91,6 +92,7 @@ export interface CommercialResult {
   loanAmount: number;
   downPaymentAmount: number;
   closingCosts: number;
+  loanPointsCost: number;
   totalCashInvested: number;
   monthlyDebtService: number;
   annualDebtService: number;
@@ -144,7 +146,8 @@ export function analyzeCommercial(inputs: CommercialInputs): CommercialResult {
   const downPaymentAmount = inputs.purchasePrice * (inputs.downPaymentPercent / 100);
   const loanAmount = inputs.purchasePrice - downPaymentAmount;
   const closingCosts = inputs.purchasePrice * (inputs.closingCostPercent / 100);
-  const totalCashInvested = downPaymentAmount + closingCosts + inputs.rehabCost;
+  const loanPointsCost = loanAmount * (inputs.loanPointsPercent / 100);
+  const totalCashInvested = downPaymentAmount + closingCosts + loanPointsCost + inputs.rehabCost;
 
   const monthlyDebtService = monthlyPrincipalAndInterest(
     loanAmount,
@@ -242,6 +245,7 @@ export function analyzeCommercial(inputs: CommercialInputs): CommercialResult {
     loanAmount,
     downPaymentAmount,
     closingCosts,
+    loanPointsCost,
     totalCashInvested,
     monthlyDebtService,
     annualDebtService,
@@ -341,6 +345,7 @@ export const DEFAULT_COMMERCIAL_INPUTS: CommercialInputs = {
   amortizationYears: 25,
   loanTermYears: 10,
   closingCostPercent: 2.5,
+  loanPointsPercent: 0,
   rehabCost: 0,
 
   propertyTaxAnnual: 24000,
