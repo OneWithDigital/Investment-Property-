@@ -11,6 +11,7 @@ import { CommercialTab } from "./tabs/CommercialTab";
 import { ShortTermRentalTab } from "./tabs/ShortTermRentalTab";
 import { HistoryTab } from "./tabs/HistoryTab";
 import { PortfolioTab } from "./tabs/PortfolioTab";
+import { MortgageCalculatorTab } from "./tabs/MortgageCalculatorTab";
 
 const TABS = [
   { id: "single-family", label: "Single-Family" },
@@ -18,6 +19,7 @@ const TABS = [
   { id: "multi-unit", label: "Multi-Unit" },
   { id: "commercial", label: "Commercial" },
   { id: "short-term-rental", label: "Short-Term Rental" },
+  { id: "mortgage-calculator", label: "Mortgage Calculator" },
   { id: "grants", label: "Grants & Funding" },
   { id: "history", label: "Saved" },
   { id: "portfolio", label: "Portfolio" },
@@ -78,6 +80,7 @@ export function TabShell() {
         {active === "short-term-rental" && (
           <ShortTermRentalTab loadAnalysisId={loadRequest?.id} loadNonce={loadRequest?.nonce} />
         )}
+        {active === "mortgage-calculator" && <MortgageCalculatorTab />}
         {active === "grants" && <GrantsFinder />}
         {active === "history" && <HistoryTab onLoad={handleLoad} />}
         {active === "portfolio" && <PortfolioTab />}
