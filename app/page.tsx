@@ -104,8 +104,12 @@ const GUIDE_PROOF = [
     body: "MLS-style value and rent comps pull from the RentCast API — actual nearby sales and rental listings, with the comparables shown so you can sanity-check the estimate yourself.",
   },
   {
-    title: "Benchmarks that reflect real risk",
-    body: "A short-term rental needs a higher cash-on-cash return (12%+) than a long-term rental (8%+) to clear the bar — because the operational effort and regulatory exposure are genuinely different, not because of an arbitrary house rule.",
+    title: "Stress-tested, not a single scenario",
+    body: "Toggle Downside / Base / Upside on any result and watch cap rate, cash flow, and the verdict recompute instantly — see whether the deal still works if rent comes in lower or vacancy runs higher, not just under the numbers you hoped for.",
+  },
+  {
+    title: "Financing modeled the way lenders actually do it",
+    body: "Loan points, PMI that automatically stops once you cross 80% loan-to-value, and a BRRRR cash-out refinance calculator showing exactly how much cash you get back out — not just a flat mortgage payment.",
   },
 ];
 
@@ -219,7 +223,7 @@ export default function LandingPage() {
                 get evaluated the same way — so they don&apos;t share a calculator here either.
               </p>
             </div>
-            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
               {GUIDE_PROOF.map((g) => (
                 <div key={g.title} className="rounded-xl border border-white/15 bg-white/5 p-4">
                   <h3 className="text-sm font-semibold text-white">{g.title}</h3>
