@@ -168,6 +168,22 @@ export const FIELD_HELP = {
     title: "Platform fee",
     body: "What Airbnb/VRBO/the booking platform takes as a percentage of booking revenue — typically around 3% on the host side, though it varies by platform and pricing model.",
   },
+  afterRepairValue: {
+    title: "After-repair value (ARV)",
+    body: "What the property will appraise for once the rehab is done — this is what a cash-out refinance lender lends against, not your purchase price. This should come from real comps (post-rehab, not pre-rehab), not a guess; overestimating it is the single most common way a BRRRR plan falls apart at the refi appraisal.",
+  },
+  refinanceLtv: {
+    title: "Refinance LTV",
+    body: "The maximum loan-to-value a cash-out refinance lender will lend against the after-repair value — commonly 70–75% for investment properties, sometimes lower depending on the lender and how recently you acquired the property (many require 6-12 months of seasoning before a cash-out refi, which this calculator doesn't model).",
+  },
+  refiRate: {
+    title: "New interest rate",
+    body: "The rate on the refinance loan — often different from your original purchase-money loan's rate, especially if it was a hard-money or private rehab loan. Get a real quote; refi rates for investment properties typically run higher than owner-occupant rates.",
+  },
+  refiClosingCosts: {
+    title: "Refinance closing costs",
+    body: "Lender fees, title, and appraisal costs for the new loan — a separate closing, separate costs from your original purchase. Typically 2-4% of the new loan amount.",
+  },
   camCost: {
     title: "CAM",
     body: "Common Area Maintenance — what you (the landlord) actually spend on shared-space upkeep (parking lot, lobby, landscaping, exterior). What tenants reimburse you for this is set separately by the Tenant reimbursement % above.",
@@ -257,5 +273,21 @@ export const RESULT_HELP = {
   breakEvenOccupancy: {
     title: "Break-even occupancy",
     body: "The minimum occupancy rate needed for booking revenue to cover all expenses and debt service — below this, the property loses money. The bigger the gap between this and your assumed occupancy, the more cushion you have if bookings come in softer than expected.",
+  },
+  cashPulledOut: {
+    title: "Cash pulled out",
+    body: "New loan amount minus your original loan payoff minus refinance closing costs. Positive means cash back in your pocket at the closing table — the whole point of a BRRRR. Negative means the refi doesn't cover paying off the original loan and its own costs, so you'd need to bring more cash instead.",
+  },
+  cashLeftInDeal: {
+    title: "Cash left in the deal",
+    body: "Your original cash invested minus cash pulled out at refinance. Zero or negative means you got all your capital back (and possibly some profit) — the classic BRRRR outcome, and why cash-on-cash return goes to infinity/undefined at that point: you're earning cash flow on money that isn't tied up in the deal anymore.",
+  },
+  postRefiCashOnCash: {
+    title: "Post-refi cash-on-cash return",
+    body: "Annual cash flow under the NEW loan, divided by whatever cash is still left in the deal after the refinance — not your original cash invested. Shows blank/undefined when no cash is left in the deal, since dividing by zero (or a negative number) doesn't produce a meaningful percentage.",
+  },
+  postRefiDscr: {
+    title: "Post-refi DSCR",
+    body: "Same NOI as before, but measured against the new loan's debt service instead of the original. A cash-out refi usually raises the loan balance and the payment, so DSCR after a refinance is typically lower than before it — worth checking this clears your new lender's minimum, not just your original one's.",
   },
 } satisfies Record<string, FieldHelpEntry>;

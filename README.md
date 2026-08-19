@@ -168,6 +168,23 @@ the Single-Family cash-flow breakdown table gets an explicit PMI line
 so the numbers reconcile rather than having it silently folded into
 "Net cash flow."
 
+**BRRRR / cash-out refinance** (`lib/refi.ts` + `components/RefiCalculator.tsx`) —
+a collapsed-by-default "+ Model a BRRRR / cash-out refinance" section on
+Single-Family and Duplex results (the two property types the strategy
+actually applies to). Modeled as a distinct before/after snapshot rather
+than an event inside the multi-year projection: enter an after-repair
+value and refinance terms, and it shows cash pulled out, cash left in
+the deal, and the post-refi monthly cash flow/cash-on-cash/DSCR under
+the new loan. Deliberately simplified — assumes the refinance happens
+shortly after rehab, before meaningful principal paydown (so the payoff
+amount is the original loan amount, not an amortized balance at some
+specific month), and doesn't model lender seasoning requirements (many
+require 6–12 months of ownership before a cash-out refi). Cash-on-cash
+return shows as "∞" rather than a number once cash left in the deal
+reaches zero or goes negative — dividing by zero/negative cash doesn't
+produce a meaningful percentage, and that's the actual point of a
+successful BRRRR (all your capital back out, sometimes with profit).
+
 ### Saved analyses, portfolio, and reports
 - **Save** any analysis from any calculator tab (`SavedAnalysis` Prisma
   model, stores inputs/result/verdict as JSON since the five property

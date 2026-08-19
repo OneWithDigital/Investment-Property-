@@ -17,6 +17,7 @@ import { MlsLookupButton } from "@/components/MlsLookupButton";
 import { AnalysisToolbar } from "@/components/AnalysisToolbar";
 import { PrintableReport } from "@/components/PrintableReport";
 import { ScenarioToggle } from "@/components/ScenarioToggle";
+import { RefiCalculator } from "@/components/RefiCalculator";
 import { runScenarioDuplex, SCENARIO_LABELS, type ScenarioKey } from "@/lib/sensitivity";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
@@ -320,6 +321,15 @@ export function DuplexTab({
                 <ScenarioToggle value={scenario} onChange={setScenario} />
               </div>
               <DuplexResults result={displayResult} verdict={displayVerdict} inputs={data.inputs} />
+              <div className="mt-4">
+                <RefiCalculator
+                  originalLoanAmount={data.result.loanAmount}
+                  totalCashInvested={data.result.totalCashInvested}
+                  monthlyNoi={data.result.monthlyNoi}
+                  purchasePrice={data.inputs.purchasePrice}
+                  rehabCost={data.inputs.rehabCost}
+                />
+              </div>
               <PrintableReport
                 title={
                   scenario === "base"

@@ -6,6 +6,7 @@ import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { AnalysisToolbar } from "@/components/AnalysisToolbar";
 import { PrintableReport } from "@/components/PrintableReport";
 import { ScenarioToggle } from "@/components/ScenarioToggle";
+import { RefiCalculator } from "@/components/RefiCalculator";
 import { DEFAULT_INPUTS } from "@/lib/calculations";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { extractStateFromAddress, findStateFactor } from "@/lib/locationFactors";
@@ -135,6 +136,15 @@ export function SingleFamilyTab({
                 verdict={displayVerdict}
                 stateFactor={data.stateFactor}
               />
+              <div className="mt-4">
+                <RefiCalculator
+                  originalLoanAmount={data.result.loanAmount}
+                  totalCashInvested={data.result.totalCashInvested}
+                  monthlyNoi={data.result.monthlyNoi}
+                  purchasePrice={data.inputs.purchasePrice}
+                  rehabCost={data.inputs.rehabCost}
+                />
+              </div>
               <PrintableReport
                 title={
                   scenario === "base"
