@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DEFAULT_COMMERCIAL_INPUTS,
   DEFAULT_REIMBURSEMENT_PERCENT,
@@ -18,6 +18,8 @@ import { MetricCard } from "@/components/MetricCard";
 import { VerdictBanner } from "@/components/VerdictBanner";
 import { AnalysisToolbar } from "@/components/AnalysisToolbar";
 import { PrintableReport } from "@/components/PrintableReport";
+import { ScenarioToggle } from "@/components/ScenarioToggle";
+import { runScenarioCommercial, SCENARIO_LABELS, type ScenarioKey } from "@/lib/sensitivity";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
 
@@ -85,12 +87,20 @@ export function CommercialTab({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+  const [scenario, setScenario] = useState<ScenarioKey>("base");
 
   const loadError = useLoadSavedAnalysis(loadAnalysisId, loadNonce, (saved) => {
     setInputs(saved.inputs);
     setData({ inputs: saved.inputs, result: saved.result, verdict: saved.verdict, stateFactor: null });
+    setScenario("base");
     setError(null);
   });
+
+  const { result: displayResult, verdict: displayVerdict } = useMemo(() => {
+    if (!data) return { result: null, verdict: null };
+    if (scenario === "base") return { result: data.result, verdict: data.verdict };
+    return runScenarioCommercial(data.inputs, scenario);
+  }, [data, scenario]);
 
   const set = <K extends keyof CommercialInputs>(key: K, value: CommercialInputs[K]) =>
     setInputs((prev) => ({ ...prev, [key]: value }));
@@ -135,6 +145,7 @@ export function CommercialTab({
         setData(null);
       } else {
         setData(json);
+        setScenario("base");
       }
     } catch {
       setError("Couldn't reach the analysis service. Try again.");
@@ -276,7 +287,7 @@ export function CommercialTab({
               Fill in the tenant rent roll and financing details, then analyze.
             </div>
           )}
-          {data && (
+          {data && displayResult && displayVerdict && (
             <>
               <AnalysisToolbar
                 propertyType="commercial"
@@ -285,22 +296,29 @@ export function CommercialTab({
                 result={data.result}
                 verdict={data.verdict}
               />
-              <CommercialResults result={data.result} verdict={data.verdict} />
+              <div className="mb-4">
+                <ScenarioToggle value={scenario} onChange={setScenario} />
+              </div>
+              <CommercialResults result={displayResult} verdict={displayVerdict} />
               <PrintableReport
-                title="Commercial Property Investment Analysis"
+                title={
+                  scenario === "base"
+                    ? "Commercial Property Investment Analysis"
+                    : `Commercial Property Investment Analysis — ${SCENARIO_LABELS[scenario]} scenario`
+                }
                 address={data.inputs.address}
-                verdict={data.verdict}
+                verdict={displayVerdict}
                 metrics={[
-                  { label: "Monthly cash flow", value: formatCurrency(data.result.monthlyCashFlow) },
-                  { label: "Cash-on-cash return", value: formatPercent(data.result.cashOnCashReturnPercent) },
-                  { label: "Cap rate (going-in)", value: formatPercent(data.result.capRatePercent) },
-                  { label: "DSCR", value: Number.isFinite(data.result.dscr) ? data.result.dscr.toFixed(2) : "∞" },
-                  { label: "Price / sqft", value: formatCurrency(data.result.pricePerSqft) },
-                  { label: "WALT", value: `${data.result.waltYears.toFixed(1)} yrs` },
+                  { label: "Monthly cash flow", value: formatCurrency(displayResult.monthlyCashFlow) },
+                  { label: "Cash-on-cash return", value: formatPercent(displayResult.cashOnCashReturnPercent) },
+                  { label: "Cap rate (going-in)", value: formatPercent(displayResult.capRatePercent) },
+                  { label: "DSCR", value: Number.isFinite(displayResult.dscr) ? displayResult.dscr.toFixed(2) : "∞" },
+                  { label: "Price / sqft", value: formatCurrency(displayResult.pricePerSqft) },
+                  { label: "WALT", value: `${displayResult.waltYears.toFixed(1)} yrs` },
                 ]}
-                tableTitle={`${data.result.projection.length}-year projection`}
+                tableTitle={`${displayResult.projection.length}-year projection`}
                 tableHeaders={["Year", "Leased rent", "NOI", "Cash flow", "Property value", "Equity"]}
-                tableRows={data.result.projection.map((p) => [
+                tableRows={displayResult.projection.map((p) => [
                   String(p.year),
                   formatCurrency(p.leasedRent),
                   formatCurrency(p.noi),

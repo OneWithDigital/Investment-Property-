@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DEFAULT_MULTI_UNIT_INPUTS,
   type MultiUnitInputs,
@@ -15,6 +15,8 @@ import { MetricCard } from "@/components/MetricCard";
 import { VerdictBanner } from "@/components/VerdictBanner";
 import { AnalysisToolbar } from "@/components/AnalysisToolbar";
 import { PrintableReport } from "@/components/PrintableReport";
+import { ScenarioToggle } from "@/components/ScenarioToggle";
+import { runScenarioMultiUnit, SCENARIO_LABELS, type ScenarioKey } from "@/lib/sensitivity";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
 
@@ -85,12 +87,20 @@ export function MultiUnitTab({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+  const [scenario, setScenario] = useState<ScenarioKey>("base");
 
   const loadError = useLoadSavedAnalysis(loadAnalysisId, loadNonce, (saved) => {
     setInputs(saved.inputs);
     setData({ inputs: saved.inputs, result: saved.result, verdict: saved.verdict, stateFactor: null });
+    setScenario("base");
     setError(null);
   });
+
+  const { result: displayResult, verdict: displayVerdict } = useMemo(() => {
+    if (!data) return { result: null, verdict: null };
+    if (scenario === "base") return { result: data.result, verdict: data.verdict };
+    return runScenarioMultiUnit(data.inputs, scenario);
+  }, [data, scenario]);
 
   const set = <K extends keyof MultiUnitInputs>(key: K, value: MultiUnitInputs[K]) =>
     setInputs((prev) => ({ ...prev, [key]: value }));
@@ -124,6 +134,7 @@ export function MultiUnitTab({
         setData(null);
       } else {
         setData(json);
+        setScenario("base");
       }
     } catch {
       setError("Couldn't reach the analysis service. Try again.");
@@ -237,7 +248,7 @@ export function MultiUnitTab({
               Fill in the unit mix and financing details, then analyze.
             </div>
           )}
-          {data && (
+          {data && displayResult && displayVerdict && (
             <>
               <AnalysisToolbar
                 propertyType="multi-unit"
@@ -246,22 +257,29 @@ export function MultiUnitTab({
                 result={data.result}
                 verdict={data.verdict}
               />
-              <MultiUnitResults result={data.result} verdict={data.verdict} />
+              <div className="mb-4">
+                <ScenarioToggle value={scenario} onChange={setScenario} />
+              </div>
+              <MultiUnitResults result={displayResult} verdict={displayVerdict} />
               <PrintableReport
-                title="Multi-Unit Investment Analysis"
+                title={
+                  scenario === "base"
+                    ? "Multi-Unit Investment Analysis"
+                    : `Multi-Unit Investment Analysis — ${SCENARIO_LABELS[scenario]} scenario`
+                }
                 address={data.inputs.address}
-                verdict={data.verdict}
+                verdict={displayVerdict}
                 metrics={[
-                  { label: "Monthly cash flow", value: formatCurrency(data.result.monthlyCashFlow) },
-                  { label: "Cash-on-cash return", value: formatPercent(data.result.cashOnCashReturnPercent) },
-                  { label: "Cap rate (going-in)", value: formatPercent(data.result.capRatePercent) },
-                  { label: "DSCR", value: Number.isFinite(data.result.dscr) ? data.result.dscr.toFixed(2) : "∞" },
-                  { label: "Price per unit", value: formatCurrency(data.result.pricePerUnit) },
-                  { label: "Expense ratio", value: formatPercent(data.result.expenseRatioPercent) },
+                  { label: "Monthly cash flow", value: formatCurrency(displayResult.monthlyCashFlow) },
+                  { label: "Cash-on-cash return", value: formatPercent(displayResult.cashOnCashReturnPercent) },
+                  { label: "Cap rate (going-in)", value: formatPercent(displayResult.capRatePercent) },
+                  { label: "DSCR", value: Number.isFinite(displayResult.dscr) ? displayResult.dscr.toFixed(2) : "∞" },
+                  { label: "Price per unit", value: formatCurrency(displayResult.pricePerUnit) },
+                  { label: "Expense ratio", value: formatPercent(displayResult.expenseRatioPercent) },
                 ]}
-                tableTitle={`${data.result.projection.length}-year projection`}
+                tableTitle={`${displayResult.projection.length}-year projection`}
                 tableHeaders={["Year", "GPR", "NOI", "Cash flow", "Property value", "Equity"]}
-                tableRows={data.result.projection.map((p) => [
+                tableRows={displayResult.projection.map((p) => [
                   String(p.year),
                   formatCurrency(p.grossPotentialRent),
                   formatCurrency(p.noi),

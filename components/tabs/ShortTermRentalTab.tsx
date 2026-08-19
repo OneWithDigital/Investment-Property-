@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DEFAULT_STR_INPUTS,
   STR_REGULATION_LABELS,
@@ -17,6 +17,13 @@ import { VerdictBanner } from "@/components/VerdictBanner";
 import { MlsLookupButton } from "@/components/MlsLookupButton";
 import { AnalysisToolbar } from "@/components/AnalysisToolbar";
 import { PrintableReport } from "@/components/PrintableReport";
+import { ScenarioToggle } from "@/components/ScenarioToggle";
+import {
+  runScenarioShortTermRental,
+  scenarioInputsShortTermRental,
+  SCENARIO_LABELS,
+  type ScenarioKey,
+} from "@/lib/sensitivity";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
 
@@ -39,12 +46,25 @@ export function ShortTermRentalTab({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+  const [scenario, setScenario] = useState<ScenarioKey>("base");
 
   const loadError = useLoadSavedAnalysis(loadAnalysisId, loadNonce, (saved) => {
     setInputs(saved.inputs);
     setData({ inputs: saved.inputs, result: saved.result, verdict: saved.verdict, stateFactor: null });
+    setScenario("base");
     setError(null);
   });
+
+  const { result: displayResult, verdict: displayVerdict } = useMemo(() => {
+    if (!data) return { result: null, verdict: null };
+    if (scenario === "base") return { result: data.result, verdict: data.verdict };
+    return runScenarioShortTermRental(data.inputs, scenario);
+  }, [data, scenario]);
+
+  const displayInputs = useMemo(
+    () => (data ? scenarioInputsShortTermRental(data.inputs, scenario) : null),
+    [data, scenario]
+  );
 
   const set = <K extends keyof ShortTermRentalInputs>(
     key: K,
@@ -66,6 +86,7 @@ export function ShortTermRentalTab({
         setData(null);
       } else {
         setData(json);
+        setScenario("base");
       }
     } catch {
       setError("Couldn't reach the analysis service. Try again.");
@@ -203,7 +224,7 @@ export function ShortTermRentalTab({
               Fill in the revenue and expense assumptions, then analyze.
             </div>
           )}
-          {data && (
+          {data && displayResult && displayVerdict && displayInputs && (
             <>
               <AnalysisToolbar
                 propertyType="short-term-rental"
@@ -212,27 +233,34 @@ export function ShortTermRentalTab({
                 result={data.result}
                 verdict={data.verdict}
               />
-              <ShortTermRentalResults result={data.result} verdict={data.verdict} inputs={data.inputs} />
+              <div className="mb-4">
+                <ScenarioToggle value={scenario} onChange={setScenario} />
+              </div>
+              <ShortTermRentalResults result={displayResult} verdict={displayVerdict} inputs={displayInputs} />
               <PrintableReport
-                title="Short-Term Rental Investment Analysis"
+                title={
+                  scenario === "base"
+                    ? "Short-Term Rental Investment Analysis"
+                    : `Short-Term Rental Investment Analysis — ${SCENARIO_LABELS[scenario]} scenario`
+                }
                 address={data.inputs.address}
-                verdict={data.verdict}
+                verdict={displayVerdict}
                 metrics={[
-                  { label: "Monthly cash flow", value: formatCurrency(data.result.monthlyCashFlow) },
-                  { label: "Cash-on-cash return", value: formatPercent(data.result.cashOnCashReturnPercent) },
-                  { label: "Cap rate", value: formatPercent(data.result.capRatePercent) },
-                  { label: "DSCR", value: Number.isFinite(data.result.dscr) ? data.result.dscr.toFixed(2) : "∞" },
-                  { label: "Cash needed to close", value: formatCurrency(data.result.totalCashInvested) },
+                  { label: "Monthly cash flow", value: formatCurrency(displayResult.monthlyCashFlow) },
+                  { label: "Cash-on-cash return", value: formatPercent(displayResult.cashOnCashReturnPercent) },
+                  { label: "Cap rate", value: formatPercent(displayResult.capRatePercent) },
+                  { label: "DSCR", value: Number.isFinite(displayResult.dscr) ? displayResult.dscr.toFixed(2) : "∞" },
+                  { label: "Cash needed to close", value: formatCurrency(displayResult.totalCashInvested) },
                   {
                     label: "Break-even occupancy",
-                    value: Number.isFinite(data.result.breakEvenOccupancyPercent)
-                      ? formatPercent(data.result.breakEvenOccupancyPercent, 0)
+                    value: Number.isFinite(displayResult.breakEvenOccupancyPercent)
+                      ? formatPercent(displayResult.breakEvenOccupancyPercent, 0)
                       : "—",
                   },
                 ]}
-                tableTitle={`${data.result.projection.length}-year projection`}
+                tableTitle={`${displayResult.projection.length}-year projection`}
                 tableHeaders={["Year", "Booking revenue", "NOI", "Cash flow", "Property value", "Equity"]}
-                tableRows={data.result.projection.map((p) => [
+                tableRows={displayResult.projection.map((p) => [
                   String(p.year),
                   formatCurrency(p.grossRent),
                   formatCurrency(p.noi),

@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PropertyForm } from "@/components/PropertyForm";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { AnalysisToolbar } from "@/components/AnalysisToolbar";
 import { PrintableReport } from "@/components/PrintableReport";
+import { ScenarioToggle } from "@/components/ScenarioToggle";
 import { DEFAULT_INPUTS } from "@/lib/calculations";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { extractStateFromAddress, findStateFactor } from "@/lib/locationFactors";
 import { useLoadSavedAnalysis } from "@/lib/useLoadSavedAnalysis";
+import { runScenarioSingleFamily, SCENARIO_LABELS, type ScenarioKey } from "@/lib/sensitivity";
 import type { PropertyInputs, CalculationResult, Verdict } from "@/lib/types";
 import type { StateFactor } from "@/lib/locationFactors";
 
@@ -31,6 +33,7 @@ export function SingleFamilyTab({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+  const [scenario, setScenario] = useState<ScenarioKey>("base");
 
   const loadError = useLoadSavedAnalysis(loadAnalysisId, loadNonce, (saved) => {
     setInputs(saved.inputs);
@@ -41,8 +44,18 @@ export function SingleFamilyTab({
       verdict: saved.verdict,
       stateFactor: stateAbbr ? findStateFactor(stateAbbr) : null,
     });
+    setScenario("base");
     setError(null);
   });
+
+  // Recomputed entirely client-side (analyzeProperty/evaluateVerdict are
+  // pure functions) so switching scenarios is instant — no server round
+  // trip, and the original submitted numbers in `data` are never mutated.
+  const { result: displayResult, verdict: displayVerdict } = useMemo(() => {
+    if (!data) return { result: null, verdict: null };
+    if (scenario === "base") return { result: data.result, verdict: data.verdict };
+    return runScenarioSingleFamily(data.inputs, scenario);
+  }, [data, scenario]);
 
   async function handleAnalyze() {
     setLoading(true);
@@ -59,6 +72,7 @@ export function SingleFamilyTab({
         setData(null);
       } else {
         setData(json);
+        setScenario("base");
       }
     } catch {
       setError("Couldn't reach the analysis service. Try again.");
@@ -104,7 +118,7 @@ export function SingleFamilyTab({
               see the full breakdown.
             </div>
           )}
-          {data && (
+          {data && displayResult && displayVerdict && (
             <>
               <AnalysisToolbar
                 propertyType="single-family"
@@ -113,26 +127,33 @@ export function SingleFamilyTab({
                 result={data.result}
                 verdict={data.verdict}
               />
+              <div className="mb-4">
+                <ScenarioToggle value={scenario} onChange={setScenario} />
+              </div>
               <ResultsDashboard
-                result={data.result}
-                verdict={data.verdict}
+                result={displayResult}
+                verdict={displayVerdict}
                 stateFactor={data.stateFactor}
               />
               <PrintableReport
-                title="Single-Family Investment Analysis"
+                title={
+                  scenario === "base"
+                    ? "Single-Family Investment Analysis"
+                    : `Single-Family Investment Analysis — ${SCENARIO_LABELS[scenario]} scenario`
+                }
                 address={data.inputs.address}
-                verdict={data.verdict}
+                verdict={displayVerdict}
                 metrics={[
-                  { label: "Monthly cash flow", value: formatCurrency(data.result.monthlyCashFlow) },
-                  { label: "Cash-on-cash return", value: formatPercent(data.result.cashOnCashReturnPercent) },
-                  { label: "Cap rate", value: formatPercent(data.result.capRatePercent) },
-                  { label: "DSCR", value: Number.isFinite(data.result.dscr) ? data.result.dscr.toFixed(2) : "∞" },
-                  { label: "Cash needed to close", value: formatCurrency(data.result.totalCashInvested) },
-                  { label: "1% rule", value: formatPercent(data.result.onePercentRulePercent, 2) },
+                  { label: "Monthly cash flow", value: formatCurrency(displayResult.monthlyCashFlow) },
+                  { label: "Cash-on-cash return", value: formatPercent(displayResult.cashOnCashReturnPercent) },
+                  { label: "Cap rate", value: formatPercent(displayResult.capRatePercent) },
+                  { label: "DSCR", value: Number.isFinite(displayResult.dscr) ? displayResult.dscr.toFixed(2) : "∞" },
+                  { label: "Cash needed to close", value: formatCurrency(displayResult.totalCashInvested) },
+                  { label: "1% rule", value: formatPercent(displayResult.onePercentRulePercent, 2) },
                 ]}
-                tableTitle={`${data.result.projection.length}-year projection`}
+                tableTitle={`${displayResult.projection.length}-year projection`}
                 tableHeaders={["Year", "Gross rent", "NOI", "Cash flow", "Property value", "Equity"]}
-                tableRows={data.result.projection.map((p) => [
+                tableRows={displayResult.projection.map((p) => [
                   String(p.year),
                   formatCurrency(p.grossRent),
                   formatCurrency(p.noi),

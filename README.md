@@ -127,6 +127,20 @@ cap rate, cash-on-cash return, DSCR, IRR, equity multiple, WALT, RevPAN,
 and the other type-specific metrics — since those are exactly the terms
 a first-time user has to reverse-engineer from the verdict otherwise.
 
+**Stress-test scenarios** (`lib/sensitivity.ts` + `components/ScenarioToggle.tsx`) —
+a Downside / Base case / Upside toggle on every results page that shifts
+rent (±5%), vacancy (+3/-2 points, or occupancy for STR since it moves
+the opposite direction), and interest rate (+1 point on the downside
+only) and instantly recomputes the full result and verdict. Recomputes
+entirely client-side — `analyzeProperty`/`evaluateVerdict` and their
+per-type equivalents are pure functions with no server or DB dependency,
+so switching scenarios is instant with no network round trip, and the
+original submitted numbers are never mutated (switching back to "Base
+case" always returns exactly what you entered). Printing while a
+non-base scenario is selected labels the report with which scenario
+it reflects, so a printed downside case can't be mistaken for the
+as-entered numbers.
+
 ### Saved analyses, portfolio, and reports
 - **Save** any analysis from any calculator tab (`SavedAnalysis` Prisma
   model, stores inputs/result/verdict as JSON since the five property
