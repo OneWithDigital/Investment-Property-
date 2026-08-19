@@ -110,6 +110,19 @@ but each supplies its own benchmarks — e.g. STR requires a higher
 cash-on-cash return (12%+) than long-term rentals (8%+) to reflect the
 added operational effort and regulatory exposure.
 
+**Field-level help** (`components/InfoHint.tsx` + `lib/fieldHelp.ts`) —
+a click-to-reveal "?" next to a field's label explaining what it is and
+why it matters (typical ranges, where to find a real number instead of
+guessing, how it differs from an easily-confused neighbor like
+maintenance vs. CapEx reserve). Content is keyed once in `lib/fieldHelp.ts`
+and reused across calculators for fields that mean the same thing
+everywhere (down payment, vacancy, closing costs, etc.), with
+property-type-specific entries (ADR, tenant reimbursement %, economic
+vacancy) added per calculator. Deliberately not applied to every single
+field — self-explanatory ones (building sqft, avg nights/stay) don't get
+a box, since annotating everything would bury the fields that actually
+need it.
+
 ### Saved analyses, portfolio, and reports
 - **Save** any analysis from any calculator tab (`SavedAnalysis` Prisma
   model, stores inputs/result/verdict as JSON since the five property

@@ -1,5 +1,8 @@
 "use client";
 
+import type { FieldHelpEntry } from "@/lib/fieldHelp";
+import { InfoHint } from "./InfoHint";
+
 interface FieldProps {
   label: string;
   value: number;
@@ -9,6 +12,8 @@ interface FieldProps {
   step?: number;
   min?: number;
   help?: string;
+  /** "What is this, and why does it matter?" — rendered as a click-to-reveal box next to the label. */
+  info?: FieldHelpEntry;
 }
 
 export function NumberField({
@@ -20,10 +25,14 @@ export function NumberField({
   step = 1,
   min = 0,
   help,
+  info,
 }: FieldProps) {
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="font-medium text-slate-700">{label}</span>
+      <span className="font-medium text-slate-700">
+        {label}
+        {info && <InfoHint title={info.title} body={info.body} />}
+      </span>
       <div className="flex items-center rounded-lg border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-slate-400 overflow-hidden">
         {prefix && (
           <span className="pl-3 text-slate-400 text-sm select-none">{prefix}</span>

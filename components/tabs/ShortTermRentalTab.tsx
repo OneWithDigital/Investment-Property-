@@ -11,6 +11,7 @@ import {
 import type { Verdict } from "@/lib/types";
 import type { StateFactor } from "@/lib/locationFactors";
 import { NumberField, SectionHeading } from "@/components/FieldGroup";
+import { FIELD_HELP } from "@/lib/fieldHelp";
 import { MetricCard } from "@/components/MetricCard";
 import { VerdictBanner } from "@/components/VerdictBanner";
 import { MlsLookupButton } from "@/components/MlsLookupButton";
@@ -123,22 +124,22 @@ export function ShortTermRentalTab({
 
           <SectionHeading>Purchase &amp; financing</SectionHeading>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label="Purchase price" prefix="$" value={inputs.purchasePrice} onChange={(v) => set("purchasePrice", v)} step={1000} />
-            <NumberField label="Down payment" suffix="%" value={inputs.downPaymentPercent} onChange={(v) => set("downPaymentPercent", v)} step={1} />
-            <NumberField label="Interest rate" suffix="%" value={inputs.interestRatePercent} onChange={(v) => set("interestRatePercent", v)} step={0.125} />
-            <NumberField label="Loan term" suffix="yrs" value={inputs.loanTermYears} onChange={(v) => set("loanTermYears", v)} step={1} />
-            <NumberField label="Closing costs" suffix="%" value={inputs.closingCostPercent} onChange={(v) => set("closingCostPercent", v)} step={0.5} />
-            <NumberField label="Furnishing / setup" prefix="$" value={inputs.furnishingSetupCost} onChange={(v) => set("furnishingSetupCost", v)} step={500} />
+            <NumberField label="Purchase price" prefix="$" value={inputs.purchasePrice} onChange={(v) => set("purchasePrice", v)} step={1000} info={FIELD_HELP.purchasePrice} />
+            <NumberField label="Down payment" suffix="%" value={inputs.downPaymentPercent} onChange={(v) => set("downPaymentPercent", v)} step={1} info={FIELD_HELP.downPayment} />
+            <NumberField label="Interest rate" suffix="%" value={inputs.interestRatePercent} onChange={(v) => set("interestRatePercent", v)} step={0.125} info={FIELD_HELP.interestRate} />
+            <NumberField label="Loan term" suffix="yrs" value={inputs.loanTermYears} onChange={(v) => set("loanTermYears", v)} step={1} info={FIELD_HELP.loanTerm} />
+            <NumberField label="Closing costs" suffix="%" value={inputs.closingCostPercent} onChange={(v) => set("closingCostPercent", v)} step={0.5} info={FIELD_HELP.closingCosts} />
+            <NumberField label="Furnishing / setup" prefix="$" value={inputs.furnishingSetupCost} onChange={(v) => set("furnishingSetupCost", v)} step={500} help="Furniture, decor, kitchen setup, photos" />
           </div>
 
           <SectionHeading>Revenue assumptions</SectionHeading>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label="Average daily rate" prefix="$" value={inputs.averageDailyRate} onChange={(v) => set("averageDailyRate", v)} step={5} />
-            <NumberField label="Occupancy" suffix="%" value={inputs.occupancyPercent} onChange={(v) => set("occupancyPercent", v)} step={1} />
-            <NumberField label="Avg nights / stay" value={inputs.avgNightsPerStay} onChange={(v) => set("avgNightsPerStay", v)} step={0.5} />
-            <NumberField label="Cleaning fee charged" prefix="$" suffix="/stay" value={inputs.cleaningFeePerStay} onChange={(v) => set("cleaningFeePerStay", v)} step={10} />
-            <NumberField label="Cleaning cost" prefix="$" suffix="/stay" value={inputs.cleaningCostPerStay} onChange={(v) => set("cleaningCostPerStay", v)} step={10} />
-            <NumberField label="Other monthly income" prefix="$" value={inputs.otherMonthlyIncome} onChange={(v) => set("otherMonthlyIncome", v)} step={25} />
+            <NumberField label="Average daily rate" prefix="$" value={inputs.averageDailyRate} onChange={(v) => set("averageDailyRate", v)} step={5} info={FIELD_HELP.averageDailyRate} />
+            <NumberField label="Occupancy" suffix="%" value={inputs.occupancyPercent} onChange={(v) => set("occupancyPercent", v)} step={1} info={FIELD_HELP.occupancyPercent} />
+            <NumberField label="Avg nights / stay" value={inputs.avgNightsPerStay} onChange={(v) => set("avgNightsPerStay", v)} step={0.5} help="Affects turnover frequency, not revenue" />
+            <NumberField label="Cleaning fee charged" prefix="$" suffix="/stay" value={inputs.cleaningFeePerStay} onChange={(v) => set("cleaningFeePerStay", v)} step={10} info={FIELD_HELP.cleaningFeeCharged} />
+            <NumberField label="Cleaning cost" prefix="$" suffix="/stay" value={inputs.cleaningCostPerStay} onChange={(v) => set("cleaningCostPerStay", v)} step={10} info={FIELD_HELP.cleaningCost} />
+            <NumberField label="Other monthly income" prefix="$" value={inputs.otherMonthlyIncome} onChange={(v) => set("otherMonthlyIncome", v)} step={25} info={FIELD_HELP.otherMonthlyIncome} />
           </div>
           <NumberField
             label="Comparable long-term rent"
@@ -148,31 +149,32 @@ export function ShortTermRentalTab({
             onChange={(v) => set("comparableLongTermMonthlyRent", v)}
             step={25}
             help="For the STR-vs-LTR premium comparison"
+            info={FIELD_HELP.comparableLongTermRent}
           />
 
           <SectionHeading>Operating expenses</SectionHeading>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label="Platform fee" suffix="% of booking rev." value={inputs.platformFeePercent} onChange={(v) => set("platformFeePercent", v)} step={0.5} />
-            <NumberField label="Co-host / management" suffix="% of revenue" value={inputs.managementPercent} onChange={(v) => set("managementPercent", v)} step={1} help="0 if self-managing" />
-            <NumberField label="Supplies" prefix="$" suffix="/mo" value={inputs.suppliesMonthly} onChange={(v) => set("suppliesMonthly", v)} step={10} />
+            <NumberField label="Platform fee" suffix="% of booking rev." value={inputs.platformFeePercent} onChange={(v) => set("platformFeePercent", v)} step={0.5} info={FIELD_HELP.platformFee} />
+            <NumberField label="Co-host / management" suffix="% of revenue" value={inputs.managementPercent} onChange={(v) => set("managementPercent", v)} step={1} help="0 if self-managing" info={FIELD_HELP.strManagementPercent} />
+            <NumberField label="Supplies" prefix="$" suffix="/mo" value={inputs.suppliesMonthly} onChange={(v) => set("suppliesMonthly", v)} step={10} help="Toiletries, coffee, paper goods, welcome basket" />
             <NumberField label="Utilities" prefix="$" suffix="/mo" value={inputs.utilitiesMonthlyOwnerPaid} onChange={(v) => set("utilitiesMonthlyOwnerPaid", v)} step={10} help="STR always owner-paid" />
             <NumberField label="Internet / streaming" prefix="$" suffix="/mo" value={inputs.internetCableMonthly} onChange={(v) => set("internetCableMonthly", v)} step={10} />
             <NumberField label="Other opex" prefix="$" suffix="/mo" value={inputs.otherMonthlyOperatingCosts} onChange={(v) => set("otherMonthlyOperatingCosts", v)} step={10} help="Pool, lawn, pest control" />
-            <NumberField label="Property tax" prefix="$" suffix="/yr" value={inputs.propertyTaxAnnual} onChange={(v) => set("propertyTaxAnnual", v)} step={100} />
-            <NumberField label="Insurance (STR policy)" prefix="$" suffix="/yr" value={inputs.insuranceAnnual} onChange={(v) => set("insuranceAnnual", v)} step={100} />
+            <NumberField label="Property tax" prefix="$" suffix="/yr" value={inputs.propertyTaxAnnual} onChange={(v) => set("propertyTaxAnnual", v)} step={100} info={FIELD_HELP.propertyTax} />
+            <NumberField label="Insurance (STR policy)" prefix="$" suffix="/yr" value={inputs.insuranceAnnual} onChange={(v) => set("insuranceAnnual", v)} step={100} help="STR policies cost more than standard landlord insurance" />
             <NumberField label="HOA" prefix="$" suffix="/mo" value={inputs.hoaMonthly} onChange={(v) => set("hoaMonthly", v)} step={10} help="Check HOA STR restrictions" />
-            <NumberField label="STR permit/license fee" prefix="$" suffix="/yr" value={inputs.strPermitAnnualFee} onChange={(v) => set("strPermitAnnualFee", v)} step={50} />
-            <NumberField label="Maintenance" suffix="% of revenue" value={inputs.maintenancePercent} onChange={(v) => set("maintenancePercent", v)} step={0.5} />
-            <NumberField label="CapEx reserve" suffix="% of revenue" value={inputs.capExPercent} onChange={(v) => set("capExPercent", v)} step={0.5} />
+            <NumberField label="STR permit/license fee" prefix="$" suffix="/yr" value={inputs.strPermitAnnualFee} onChange={(v) => set("strPermitAnnualFee", v)} step={50} help="Separate from any lodging/occupancy tax, which typically passes through to the guest" />
+            <NumberField label="Maintenance" suffix="% of revenue" value={inputs.maintenancePercent} onChange={(v) => set("maintenancePercent", v)} step={0.5} info={FIELD_HELP.maintenancePercent} />
+            <NumberField label="CapEx reserve" suffix="% of revenue" value={inputs.capExPercent} onChange={(v) => set("capExPercent", v)} step={0.5} info={FIELD_HELP.capExPercent} />
           </div>
 
           <SectionHeading>Growth &amp; exit</SectionHeading>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label="Revenue growth" suffix="%/yr" value={inputs.annualRevenueGrowthPercent} onChange={(v) => set("annualRevenueGrowthPercent", v)} step={0.5} />
-            <NumberField label="Expense growth" suffix="%/yr" value={inputs.annualExpenseGrowthPercent} onChange={(v) => set("annualExpenseGrowthPercent", v)} step={0.5} />
-            <NumberField label="Appreciation" suffix="%/yr" value={inputs.annualAppreciationPercent} onChange={(v) => set("annualAppreciationPercent", v)} step={0.5} />
-            <NumberField label="Selling costs" suffix="%" value={inputs.sellingCostPercent} onChange={(v) => set("sellingCostPercent", v)} step={0.5} />
-            <NumberField label="Hold period" suffix="yrs" value={inputs.holdPeriodYears} onChange={(v) => set("holdPeriodYears", v)} step={1} />
+            <NumberField label="Revenue growth" suffix="%/yr" value={inputs.annualRevenueGrowthPercent} onChange={(v) => set("annualRevenueGrowthPercent", v)} step={0.5} info={FIELD_HELP.rentGrowth} />
+            <NumberField label="Expense growth" suffix="%/yr" value={inputs.annualExpenseGrowthPercent} onChange={(v) => set("annualExpenseGrowthPercent", v)} step={0.5} info={FIELD_HELP.expenseGrowth} />
+            <NumberField label="Appreciation" suffix="%/yr" value={inputs.annualAppreciationPercent} onChange={(v) => set("annualAppreciationPercent", v)} step={0.5} info={FIELD_HELP.appreciation} />
+            <NumberField label="Selling costs" suffix="%" value={inputs.sellingCostPercent} onChange={(v) => set("sellingCostPercent", v)} step={0.5} info={FIELD_HELP.sellingCosts} />
+            <NumberField label="Hold period" suffix="yrs" value={inputs.holdPeriodYears} onChange={(v) => set("holdPeriodYears", v)} step={1} info={FIELD_HELP.holdPeriod} />
           </div>
 
           <button
