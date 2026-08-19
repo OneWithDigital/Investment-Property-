@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Header } from "./Header";
+import { AdSlot } from "./AdSlot";
 import { VerifyEmailBanner } from "./VerifyEmailBanner";
 import { GrantsFinder } from "./GrantsFinder";
 import { SingleFamilyTab } from "./tabs/SingleFamilyTab";
@@ -81,6 +82,10 @@ export function TabShell() {
         {active === "grants" && <GrantsFinder />}
         {active === "history" && <HistoryTab onLoad={handleLoad} />}
         {active === "portfolio" && <PortfolioTab />}
+
+        <div className="mt-8">
+          <AdSlot slot="app-footer" />
+        </div>
       </main>
     </div>
   );

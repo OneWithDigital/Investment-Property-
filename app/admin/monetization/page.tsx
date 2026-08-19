@@ -112,9 +112,10 @@ export default function AdminMonetizationPage() {
       <header className="mb-6">
         <h1 className="text-xl font-bold text-slate-900">Monetization</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-500">
-          Reserved for affiliate links and advertisements. This manages the data only — nothing in the app
-          renders these yet, so creating one here has no visible effect until a display slot is built.
-          New placements default to inactive.
+          Affiliate links and advertisements. One live slot exists today —{" "}
+          <code className="rounded bg-slate-100 px-1 py-0.5">app-footer</code>, shown at the bottom of every
+          page — so a placement created with that slot and switched Active goes live on the site
+          immediately. New placements default to inactive, so nothing appears until you turn one on.
         </p>
       </header>
 
@@ -139,10 +140,12 @@ export default function AdminMonetizationPage() {
             </select>
           </label>
           <label className="text-xs font-medium text-slate-600">
-            Slot (free text, e.g. results-footer)
+            Slot (use <code className="rounded bg-slate-100 px-1 py-0.5">app-footer</code> — the only slot
+            currently rendered anywhere)
             <input
               value={form.slot}
               onChange={(e) => setForm({ ...form, slot: e.target.value })}
+              placeholder="app-footer"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </label>

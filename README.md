@@ -142,11 +142,15 @@ handler should assume ran correctly.
   "SSH in and edit `.env`," which isn't worth it unless non-technical
   staff need to rotate keys without deploy access.
 - **Monetization** (`/admin/monetization`) — CRUD for `AdPlacement`
-  records (affiliate links / ads), reserved for future use per product
-  request. This manages data only; nothing in the app renders these yet,
-  and new placements default to inactive. Building the actual display
-  slots (where an ad/affiliate link shows up in the calculator UI) is
-  follow-up work, not done here.
+  records (affiliate links / ads). `components/AdSlot.tsx` renders active
+  placements for a given slot, fetched publicly via
+  `GET /api/ad-placements?slot=`; one slot is wired into the app today —
+  `app-footer`, mounted in `TabShell.tsx` so it appears at the bottom of
+  every tab. New placements default to inactive, so nothing shows until
+  you create one with slot `app-footer` and switch it on. Adding another
+  slot elsewhere in the UI is a one-line `<AdSlot slot="..." />` plus
+  picking that same string as the slot value in the admin form — no
+  schema or API changes needed.
 
 ### Grants & Funding finder
 `lib/grants.ts` is a curated reference of ~20 real federal (plus

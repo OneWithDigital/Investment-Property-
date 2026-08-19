@@ -89,10 +89,12 @@ enum AdPlacementType {
   ADVERTISEMENT
 }
 
-/// Reserved for future affiliate links / ad placements. Managed from the
-/// admin Monetization page, but nothing in the app renders these yet —
-/// `active` defaults to false so creating one has no visible effect until
-/// a display slot is built and wired up.
+/// Affiliate links / ad placements, managed from the admin Monetization
+/// page and served publicly via GET /api/ad-placements?slot=. One slot is
+/// currently rendered anywhere in the app — "app-footer" (components/AdSlot.tsx,
+/// mounted in TabShell) — other slot values are inert until a component
+/// renders them. `active` defaults to false, so a new row has no visible
+/// effect until explicitly turned on.
 model AdPlacement {
   id          String          @id @default(cuid())
   type        AdPlacementType
