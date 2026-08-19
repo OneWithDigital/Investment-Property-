@@ -126,6 +126,21 @@ usually shows HELOC chunking landing close to — or, when the HELOC rate
 exceeds the mortgage rate, worse than — simply sending the same monthly
 cash flow straight to principal.
 
+The HELOC strategy has a `cashFlowStyle` toggle for the two real-world
+variants: **conservative** (mortgage payment stays on normal autopay;
+only the leftover surplus sweeps into the HELOC once a month) and **full
+pass-through** (paycheck deposits straight into the HELOC and the
+mortgage payment itself is funded from that pool, approximated with a
+twice-a-month crediting cycle). `recommendedHelocBuffer()` computes a
+suggested reserve — the greater of 10% of the credit limit or 2-3 months
+of the P&I payment (3 under full pass-through, since that style has no
+separate cash cushion) — which the UI pre-fills and keeps in sync until
+the user overrides it. The simulation also tracks whether a plan would
+ever push the HELOC balance past its limit and surfaces that as an
+explicit warning, plus a persistent risk disclaimer banner, since a
+HELOC is secured by the home and full pass-through in particular removes
+any independent liquidity buffer.
+
 ### Grants & Funding finder
 `lib/grants.ts` is a curated reference of ~20 real federal (plus
 representative state/local) programs — FHA 203(k), USDA rural repair
