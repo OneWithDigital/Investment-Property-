@@ -101,11 +101,20 @@ export function ResultsDashboard({
               <Row label="Management" value={-result.monthlyManagement} />
               <Row label="Utilities" value={-result.monthlyUtilities} />
               <Row label="Mortgage P&I" value={-result.monthlyPrincipalAndInterest} />
+              {result.monthlyPmi > 0 && <Row label="PMI" value={-result.monthlyPmi} />}
               <Row label="Net cash flow" value={result.monthlyCashFlow} bold />
             </tbody>
           </table>
         </div>
       </div>
+
+      {result.monthlyPmi > 0 && (
+        <p className="text-xs text-slate-500">
+          {result.pmiDropsAfterYear !== null
+            ? `PMI (${formatCurrency(result.monthlyPmi)}/mo) is included above and stops automatically after year ${result.pmiDropsAfterYear}, once your loan balance reaches 80% of the original purchase price.`
+            : `PMI (${formatCurrency(result.monthlyPmi)}/mo) is included above and doesn't fall to 80% loan-to-value within your ${result.projection.length}-year hold period at this pace of paydown.`}
+        </p>
+      )}
 
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
         <h3 className="px-5 py-3 text-sm font-semibold text-slate-700 bg-slate-50 border-b border-slate-200">

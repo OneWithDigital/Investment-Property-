@@ -27,6 +27,7 @@ export interface ShortTermRentalInputs {
   loanTermYears: number;
   closingCostPercent: number;
   loanPointsPercent: number;
+  pmiMonthlyPercent: number;
   furnishingSetupCost: number;
 
   averageDailyRate: number;
@@ -79,6 +80,8 @@ export interface ShortTermRentalResult {
   loanPointsCost: number;
   totalCashInvested: number;
   monthlyPrincipalAndInterest: number;
+  monthlyPmi: number;
+  pmiDropsAfterYear: number | null;
   monthlyCashFlow: number;
   annualCashFlow: number;
 
@@ -115,7 +118,8 @@ function cashFlowAtOccupancy(
   inputs: ShortTermRentalInputs,
   occFraction: number,
   fixedOpEx: number,
-  annualDebtService: number
+  annualDebtService: number,
+  annualPmi: number
 ): number {
   const nightsPerStay = Math.max(inputs.avgNightsPerStay, 1);
   const bookingRevenue = inputs.averageDailyRate * 365 * occFraction;
@@ -132,7 +136,7 @@ function cashFlowAtOccupancy(
 
   const variableExpenses = platformFees + managementFee + maintenance + capEx + cleaningCost;
   const noi = grossIncome - fixedOpEx - variableExpenses;
-  return noi - annualDebtService;
+  return noi - annualDebtService - annualPmi;
 }
 
 export function analyzeShortTermRental(
@@ -177,7 +181,13 @@ export function analyzeShortTermRental(
     inputs.loanTermYears
   );
   const annualDebtService = pAndI * 12;
-  const monthlyCashFlow = monthlyNoi - pAndI;
+
+  // See lib/calculations.ts for the full PMI rationale — same rule here:
+  // < 20% down, cancels at 80% of original purchase price.
+  const pmiEligible = inputs.downPaymentPercent < 20 && inputs.pmiMonthlyPercent > 0;
+  const monthlyPmi = pmiEligible ? (loanAmount * (inputs.pmiMonthlyPercent / 100)) / 12 : 0;
+
+  const monthlyCashFlow = monthlyNoi - pAndI - monthlyPmi;
   const annualCashFlow = monthlyCashFlow * 12;
 
   const capRatePercent =
@@ -189,8 +199,9 @@ export function analyzeShortTermRental(
 
   // Break-even occupancy: cash flow is linear in occupancy fraction, so
   // interpolate between occ=0 and occ=1.
-  const cfAt0 = cashFlowAtOccupancy(inputs, 0, fixedOpEx, annualDebtService);
-  const cfAt1 = cashFlowAtOccupancy(inputs, 1, fixedOpEx, annualDebtService);
+  const annualPmi = monthlyPmi * 12;
+  const cfAt0 = cashFlowAtOccupancy(inputs, 0, fixedOpEx, annualDebtService, annualPmi);
+  const cfAt1 = cashFlowAtOccupancy(inputs, 1, fixedOpEx, annualDebtService, annualPmi);
   const breakEvenOccupancyPercent =
     cfAt1 === cfAt0 ? NaN : (-cfAt0 / (cfAt1 - cfAt0)) * 100;
 
@@ -216,7 +227,15 @@ export function analyzeShortTermRental(
 
   const projection: ProjectionYear[] = [];
   let cumulativeCashFlow = 0;
+  let pmiDropsAfterYear: number | null = null;
+  let pmiWasActiveLastYear = pmiEligible;
   for (let year = 1; year <= years; year++) {
+    const beginningBalance = amort[year - 1]?.beginningBalance ?? loanAmount;
+    const pmiActiveThisYear = pmiEligible && beginningBalance / inputs.purchasePrice > 0.8;
+    const pmiAnnualYear = pmiActiveThisYear ? loanAmount * (inputs.pmiMonthlyPercent / 100) : 0;
+    if (pmiWasActiveLastYear && !pmiActiveThisYear) pmiDropsAfterYear = year - 1;
+    pmiWasActiveLastYear = pmiActiveThisYear;
+
     const revenueGrowth = Math.pow(1 + inputs.annualRevenueGrowthPercent / 100, year - 1);
     const expenseGrowth = Math.pow(1 + inputs.annualExpenseGrowthPercent / 100, year - 1);
 
@@ -237,7 +256,7 @@ export function analyzeShortTermRental(
       fixedOpExYear + platformFees + managementFee + maintenance + capEx + cleaningCost;
     const noi = grossIncome - operatingExpenses;
     const debtService = annualDebtService;
-    const cashFlow = noi - debtService;
+    const cashFlow = noi - debtService - pmiAnnualYear;
     cumulativeCashFlow += cashFlow;
 
     const propertyValue =
@@ -294,6 +313,8 @@ export function analyzeShortTermRental(
     loanPointsCost,
     totalCashInvested,
     monthlyPrincipalAndInterest: pAndI,
+    monthlyPmi,
+    pmiDropsAfterYear,
     monthlyCashFlow,
     annualCashFlow,
     capRatePercent,
@@ -394,6 +415,7 @@ export const DEFAULT_STR_INPUTS: ShortTermRentalInputs = {
   loanTermYears: 30,
   closingCostPercent: 3,
   loanPointsPercent: 0,
+  pmiMonthlyPercent: 0,
   furnishingSetupCost: 25000,
 
   averageDailyRate: 220,

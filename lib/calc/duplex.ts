@@ -23,6 +23,7 @@ export interface DuplexInputs {
   loanTermYears: number;
   closingCostPercent: number;
   loanPointsPercent: number;
+  pmiMonthlyPercent: number;
   rehabCost: number;
 
   units: RentalUnit[];
@@ -58,6 +59,8 @@ export interface DuplexResult {
   totalCashInvested: number;
 
   monthlyPrincipalAndInterest: number;
+  monthlyPmi: number;
+  pmiDropsAfterYear: number | null;
   totalMonthlyOperatingExpenses: number;
   totalMonthlyOutflow: number;
 
@@ -123,15 +126,20 @@ export function analyzeDuplex(inputs: DuplexInputs): DuplexResult {
     inputs.loanTermYears
   );
 
+  // See lib/calculations.ts for the full PMI rationale — same rule here:
+  // < 20% down, cancels at 80% of original purchase price.
+  const pmiEligible = inputs.downPaymentPercent < 20 && inputs.pmiMonthlyPercent > 0;
+  const monthlyPmi = pmiEligible ? (loanAmount * (inputs.pmiMonthlyPercent / 100)) / 12 : 0;
+
   const vacancyLoss = actualMonthlyRentCollected * (inputs.vacancyPercent / 100);
   const effectiveGrossMonthlyIncome =
     actualMonthlyRentCollected - vacancyLoss + inputs.otherMonthlyIncome;
   const opEx = operatingExpenses(inputs, actualMonthlyRentCollected);
   const monthlyNoi = effectiveGrossMonthlyIncome - opEx;
   const annualNoi = monthlyNoi * 12;
-  const monthlyCashFlow = monthlyNoi - pAndI;
+  const monthlyCashFlow = monthlyNoi - pAndI - monthlyPmi;
   const annualCashFlow = monthlyCashFlow * 12;
-  const totalMonthlyOutflow = opEx + pAndI;
+  const totalMonthlyOutflow = opEx + pAndI + monthlyPmi;
 
   const capRatePercent =
     inputs.purchasePrice > 0 ? (annualNoi / inputs.purchasePrice) * 100 : 0;
@@ -157,7 +165,7 @@ export function analyzeDuplex(inputs: DuplexInputs): DuplexResult {
     fullMarketMonthlyRent - fullyRentedVacancyLoss + inputs.otherMonthlyIncome;
   const fullyRentedOpEx = operatingExpenses(inputs, fullMarketMonthlyRent);
   const fullyRentedNoi = fullyRentedEffectiveIncome - fullyRentedOpEx;
-  const fullyRentedMonthlyCashFlow = fullyRentedNoi - pAndI;
+  const fullyRentedMonthlyCashFlow = fullyRentedNoi - pAndI - monthlyPmi;
   const fullyRentedCapRatePercent =
     inputs.purchasePrice > 0 ? ((fullyRentedNoi * 12) / inputs.purchasePrice) * 100 : 0;
 
@@ -172,8 +180,17 @@ export function analyzeDuplex(inputs: DuplexInputs): DuplexResult {
 
   const projection: ProjectionYear[] = [];
   let cumulativeCashFlow = 0;
+  let pmiDropsAfterYear: number | null = null;
+  let pmiWasActiveLastYear = pmiEligible;
   for (let year = 1; year <= years; year++) {
     const growth = (rate: number) => Math.pow(1 + rate / 100, year - 1);
+
+    const beginningBalance = amort[year - 1]?.beginningBalance ?? loanAmount;
+    const pmiActiveThisYear = pmiEligible && beginningBalance / inputs.purchasePrice > 0.8;
+    const pmiAnnual = pmiActiveThisYear ? loanAmount * (inputs.pmiMonthlyPercent / 100) : 0;
+    if (pmiWasActiveLastYear && !pmiActiveThisYear) pmiDropsAfterYear = year - 1;
+    pmiWasActiveLastYear = pmiActiveThisYear;
+
     const grossRentAnnual = actualMonthlyRentCollected * 12 * growth(inputs.annualRentGrowthPercent);
     const otherIncomeAnnual = inputs.otherMonthlyIncome * 12 * growth(inputs.annualRentGrowthPercent);
     const vacancyAnnual = grossRentAnnual * (inputs.vacancyPercent / 100);
@@ -191,7 +208,7 @@ export function analyzeDuplex(inputs: DuplexInputs): DuplexResult {
 
     const noi = effectiveGrossIncome - operatingExpensesYear;
     const debtServiceYear = pAndI * 12;
-    const cashFlow = noi - debtServiceYear;
+    const cashFlow = noi - debtServiceYear - pmiAnnual;
     cumulativeCashFlow += cashFlow;
 
     const propertyValue = inputs.purchasePrice * growth(inputs.annualAppreciationPercent);
@@ -240,6 +257,8 @@ export function analyzeDuplex(inputs: DuplexInputs): DuplexResult {
     loanPointsCost,
     totalCashInvested,
     monthlyPrincipalAndInterest: pAndI,
+    monthlyPmi,
+    pmiDropsAfterYear,
     totalMonthlyOperatingExpenses: opEx,
     totalMonthlyOutflow,
     monthlyNoi,
@@ -361,6 +380,7 @@ export const DEFAULT_DUPLEX_INPUTS: DuplexInputs = {
   loanTermYears: 30,
   closingCostPercent: 3,
   loanPointsPercent: 0,
+  pmiMonthlyPercent: 0,
   rehabCost: 0,
 
   units: [

@@ -181,6 +181,99 @@ describe("analyzeProperty — loan points", () => {
   });
 });
 
+describe("analyzeProperty — PMI", () => {
+  it("does not charge PMI at 20%+ down, even if a rate is entered", () => {
+    const result = analyzeProperty({
+      ...DEFAULT_INPUTS,
+      purchasePrice: 300000,
+      downPaymentPercent: 20,
+      pmiMonthlyPercent: 0.75,
+    });
+    expect(result.monthlyPmi).toBe(0);
+    expect(result.pmiDropsAfterYear).toBeNull();
+  });
+
+  it("does not charge PMI when the rate is 0, even below 20% down", () => {
+    const result = analyzeProperty({
+      ...DEFAULT_INPUTS,
+      purchasePrice: 300000,
+      downPaymentPercent: 10,
+      pmiMonthlyPercent: 0,
+    });
+    expect(result.monthlyPmi).toBe(0);
+  });
+
+  it("charges monthly PMI as annual rate x loan amount / 12 below 20% down", () => {
+    const result = analyzeProperty({
+      ...DEFAULT_INPUTS,
+      purchasePrice: 300000,
+      downPaymentPercent: 10,
+      pmiMonthlyPercent: 0.6,
+    });
+    // loan amount = 270,000; 0.6%/yr / 12 = $135/mo
+    expect(result.monthlyPmi).toBeCloseTo(135, 6);
+  });
+
+  it("reduces monthly cash flow but leaves DSCR unaffected (PMI isn't debt service)", () => {
+    const shared = {
+      ...DEFAULT_INPUTS,
+      purchasePrice: 300000,
+      downPaymentPercent: 10,
+      monthlyRent: 2200,
+    };
+    const withoutPmi = analyzeProperty({ ...shared, pmiMonthlyPercent: 0 });
+    const withPmi = analyzeProperty({ ...shared, pmiMonthlyPercent: 0.6 });
+    expect(withPmi.monthlyCashFlow).toBeCloseTo(withoutPmi.monthlyCashFlow - 135, 6);
+    expect(withPmi.dscr).toBeCloseTo(withoutPmi.dscr, 6);
+  });
+
+  it("auto-cancels once the amortized balance falls to 80% of the original purchase price", () => {
+    // A short, high-payment loan term so the 80% LTV crossover happens
+    // within a modeled hold period, and is independently derivable from
+    // amortizationSchedule (already covered by its own tests elsewhere)
+    // rather than hand-computed here.
+    const inputs: PropertyInputs = {
+      ...DEFAULT_INPUTS,
+      purchasePrice: 300000,
+      downPaymentPercent: 10,
+      interestRatePercent: 6,
+      loanTermYears: 5,
+      pmiMonthlyPercent: 0.6,
+      holdPeriodYears: 5,
+    };
+    const loanAmount = inputs.purchasePrice * 0.9;
+    const amort = amortizationSchedule(loanAmount, inputs.interestRatePercent, inputs.loanTermYears, 5);
+    // amort is 0-indexed by array position but 1-indexed by `.year`;
+    // findIndex's 0-based result equals (1-indexed year - 1) of the
+    // first year whose *beginning* balance is already at/under 80% LTV —
+    // which is exactly one less than that year number, i.e. the last
+    // year PMI was still charged.
+    const firstYearGone = amort.findIndex((y) => y.beginningBalance / inputs.purchasePrice <= 0.8);
+
+    const result = analyzeProperty(inputs);
+
+    if (firstYearGone === -1) {
+      // Loan never crosses 80% LTV within the modeled years — PMI stays on.
+      expect(result.pmiDropsAfterYear).toBeNull();
+    } else {
+      expect(result.pmiDropsAfterYear).toBe(firstYearGone); // 0-indexed findIndex == 1-indexed prior year
+    }
+
+    // Whatever year it drops, later years' cash flow should be higher
+    // than earlier years' by roughly the monthly PMI x 12 once it's gone
+    // (sanity check on direction, not exact — other growth factors move too).
+    if (result.pmiDropsAfterYear !== null) {
+      const beforeDrop = result.projection[result.pmiDropsAfterYear - 1];
+      const afterDrop = result.projection[result.pmiDropsAfterYear];
+      expect(beforeDrop).toBeDefined();
+      expect(afterDrop).toBeDefined();
+      if (beforeDrop && afterDrop) {
+        expect(afterDrop.cashFlow).toBeGreaterThan(beforeDrop.cashFlow);
+      }
+    }
+  });
+});
+
 describe("analyzeProperty — negative cash flow deal", () => {
   it("flags negative monthly cash flow when expenses exceed income", () => {
     const inputs: PropertyInputs = {

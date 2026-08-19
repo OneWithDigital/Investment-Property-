@@ -150,6 +150,24 @@ affect cash-to-close and cash-on-cash return but not monthly cash flow or
 DSCR — this tool doesn't model buying down the rate with points, only the
 upfront fee.
 
+**PMI** — an optional `pmiMonthlyPercent` field on Single-Family, Duplex,
+and Short-Term Rental (the three residential/1-4-unit types where
+conventional/FHA financing conventions actually apply — skipped on
+Multi-Unit and Commercial, which use agency/commercial loans that don't
+carry PMI). Only charged when down payment is under 20%; automatically
+stops in the projection once the loan balance falls to 80% of the
+*original* purchase price, matching the Homeowners Protection Act's
+automatic-termination rule rather than requiring the user to model
+cancellation themselves. Excluded from DSCR and NOI (it's a financing
+cost, not a property operating cost or something lenders count in their
+own DSCR test) but included in monthly cash flow, cash-on-cash return,
+and — for Duplex house-hacking — effective housing cost, since it's a
+real cost the owner actually pays. The results view shows which year
+PMI drops off (or that it doesn't within the modeled hold period), and
+the Single-Family cash-flow breakdown table gets an explicit PMI line
+so the numbers reconcile rather than having it silently folded into
+"Net cash flow."
+
 ### Saved analyses, portfolio, and reports
 - **Save** any analysis from any calculator tab (`SavedAnalysis` Prisma
   model, stores inputs/result/verdict as JSON since the five property

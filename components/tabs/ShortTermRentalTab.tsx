@@ -151,6 +151,7 @@ export function ShortTermRentalTab({
             <NumberField label="Loan term" suffix="yrs" value={inputs.loanTermYears} onChange={(v) => set("loanTermYears", v)} step={1} info={FIELD_HELP.loanTerm} />
             <NumberField label="Closing costs" suffix="%" value={inputs.closingCostPercent} onChange={(v) => set("closingCostPercent", v)} step={0.5} info={FIELD_HELP.closingCosts} />
             <NumberField label="Loan points" suffix="%" value={inputs.loanPointsPercent} onChange={(v) => set("loanPointsPercent", v)} step={0.25} info={FIELD_HELP.loanPoints} />
+            <NumberField label="PMI" suffix="%/yr" value={inputs.pmiMonthlyPercent} onChange={(v) => set("pmiMonthlyPercent", v)} step={0.05} help="Only applies below 20% down" info={FIELD_HELP.pmi} />
             <NumberField label="Furnishing / setup" prefix="$" value={inputs.furnishingSetupCost} onChange={(v) => set("furnishingSetupCost", v)} step={500} help="Furniture, decor, kitchen setup, photos" />
           </div>
 
@@ -307,6 +308,14 @@ function ShortTermRentalResults({
         <MetricCard label="Revenue / available night" value={formatCurrency(result.revenuePerAvailableNight, 2)} info={RESULT_HELP.revenuePerAvailableNight} />
         <MetricCard label="Gross booking revenue" value={formatCurrency(result.grossBookingRevenueAnnual)} help="Annual" info={RESULT_HELP.grossBookingRevenue} />
       </div>
+
+      {result.monthlyPmi > 0 && (
+        <p className="text-xs text-slate-500">
+          {result.pmiDropsAfterYear !== null
+            ? `PMI (${formatCurrency(result.monthlyPmi)}/mo) is already factored into cash flow and break-even occupancy above, and stops automatically after year ${result.pmiDropsAfterYear}, once your loan balance reaches 80% of the original purchase price.`
+            : `PMI (${formatCurrency(result.monthlyPmi)}/mo) is already factored into cash flow and break-even occupancy above, and doesn't fall to 80% loan-to-value within your ${result.projection.length}-year hold period at this pace of paydown.`}
+        </p>
+      )}
 
       {result.strPremiumMonthly !== null && (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">

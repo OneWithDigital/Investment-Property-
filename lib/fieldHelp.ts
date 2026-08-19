@@ -36,6 +36,10 @@ export const FIELD_HELP = {
     title: "Loan points",
     body: "An upfront fee paid to the lender at closing, quoted as a % of the loan amount (1 point = 1% of the loan). Separate from closing costs above — some lenders quote them together, some separately. Leave at 0 unless your loan estimate actually shows a points/origination charge; this doesn't lower your rate here, it's just an added cash-to-close cost.",
   },
+  pmi: {
+    title: "PMI (Private Mortgage Insurance)",
+    body: "Only relevant on conventional loans with less than 20% down — lenders require it to protect themselves against the higher default risk. Enter the annual rate as a % of the loan amount (commonly 0.3%–1.5%, ask your lender for the actual quote); it's automatically ignored if your down payment is 20%+. It also automatically stops being charged in the projection once your loan balance falls to 80% of the original purchase price, matching federal law (the Homeowners Protection Act) — you don't have to do anything to make that happen.",
+  },
   rehabCost: {
     title: "Rehab / repair budget",
     body: "One-time money spent getting the property rent-ready or fixing deferred maintenance before/at move-in. This adds to your total cash needed to close, but isn't an ongoing expense.",

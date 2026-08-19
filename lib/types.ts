@@ -6,6 +6,7 @@ export interface PropertyInputs {
   loanTermYears: number;
   closingCostPercent: number; // 0-100, % of purchase price
   loanPointsPercent: number; // 0-100, upfront lender fee as % of loan amount
+  pmiMonthlyPercent: number; // 0-100, annual PMI rate as % of loan amount; only charged while down payment < 20% and remaining balance > 80% of purchase price
   rehabCost: number;
 
   monthlyRent: number;
@@ -58,6 +59,9 @@ export interface CalculationResult {
   totalCashInvested: number;
 
   monthlyPrincipalAndInterest: number;
+  monthlyPmi: number;
+  /** First projection year (1-indexed) PMI is no longer charged; null if it never applies, or doesn't drop off within the modeled hold period. */
+  pmiDropsAfterYear: number | null;
   monthlyPropertyTax: number;
   monthlyInsurance: number;
   monthlyHoa: number;

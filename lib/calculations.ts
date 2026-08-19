@@ -120,6 +120,15 @@ export function analyzeProperty(inputs: PropertyInputs): CalculationResult {
     inputs.loanTermYears
   );
 
+  // PMI only applies to conventional loans with less than 20% down, and
+  // automatically cancels once the balance falls to 80% of the ORIGINAL
+  // purchase price (Homeowners Protection Act) — not 80% of current
+  // value, and not something a borrower has to request. Year 1 always
+  // starts at the full loan amount, so this is just the < 20%-down check;
+  // later years are handled in the projection loop below.
+  const pmiEligible = inputs.downPaymentPercent < 20 && inputs.pmiMonthlyPercent > 0;
+  const monthlyPmi = pmiEligible ? (loanAmount * (inputs.pmiMonthlyPercent / 100)) / 12 : 0;
+
   const monthlyPropertyTax = inputs.propertyTaxAnnual / 12;
   const monthlyInsurance = inputs.insuranceAnnual / 12;
   const monthlyHoa = inputs.hoaMonthly;
@@ -144,10 +153,14 @@ export function analyzeProperty(inputs: PropertyInputs): CalculationResult {
   const monthlyNoi = effectiveGrossMonthlyIncome - totalMonthlyOperatingExpenses;
   const annualNoi = monthlyNoi * 12;
 
+  // PMI is deliberately excluded from totalMonthlyDebtService (and so
+  // from DSCR below) — it's a financing-choice cost, not principal or
+  // interest, and lenders' own DSCR calculations don't count it either.
+  // It still reduces actual cash flow, so it comes out here instead.
   const totalMonthlyDebtService = pAndI;
-  const monthlyCashFlow = monthlyNoi - totalMonthlyDebtService;
+  const monthlyCashFlow = monthlyNoi - totalMonthlyDebtService - monthlyPmi;
   const annualCashFlow = monthlyCashFlow * 12;
-  const totalMonthlyOutflow = totalMonthlyOperatingExpenses + totalMonthlyDebtService;
+  const totalMonthlyOutflow = totalMonthlyOperatingExpenses + totalMonthlyDebtService + monthlyPmi;
 
   const capRatePercent =
     inputs.purchasePrice > 0 ? (annualNoi / inputs.purchasePrice) * 100 : 0;
@@ -188,8 +201,19 @@ export function analyzeProperty(inputs: PropertyInputs): CalculationResult {
 
   const projection: ProjectionYear[] = [];
   let cumulativeCashFlow = 0;
+  let pmiDropsAfterYear: number | null = null;
+  let pmiWasActiveLastYear = pmiEligible;
   for (let year = 1; year <= years; year++) {
     const growth = (rate: number) => Math.pow(1 + rate / 100, year - 1);
+
+    // Charged against this year's *beginning* balance — the balance PMI
+    // is actually assessed against for the year, and what year 1 already
+    // used above via loanAmount (a year's beginning balance).
+    const beginningBalance = amort[year - 1]?.beginningBalance ?? loanAmount;
+    const pmiActiveThisYear = pmiEligible && beginningBalance / inputs.purchasePrice > 0.8;
+    const pmiAnnual = pmiActiveThisYear ? loanAmount * (inputs.pmiMonthlyPercent / 100) : 0;
+    if (pmiWasActiveLastYear && !pmiActiveThisYear) pmiDropsAfterYear = year - 1;
+    pmiWasActiveLastYear = pmiActiveThisYear;
 
     const grossRentAnnual =
       inputs.monthlyRent * 12 * growth(inputs.annualRentGrowthPercent);
@@ -219,7 +243,7 @@ export function analyzeProperty(inputs: PropertyInputs): CalculationResult {
 
     const noi = effectiveGrossIncome - operatingExpenses;
     const debtServiceYear = totalMonthlyDebtService * 12;
-    const cashFlow = noi - debtServiceYear;
+    const cashFlow = noi - debtServiceYear - pmiAnnual;
     cumulativeCashFlow += cashFlow;
 
     const propertyValue =
@@ -270,6 +294,8 @@ export function analyzeProperty(inputs: PropertyInputs): CalculationResult {
     totalCashInvested,
 
     monthlyPrincipalAndInterest: pAndI,
+    monthlyPmi,
+    pmiDropsAfterYear,
     monthlyPropertyTax,
     monthlyInsurance,
     monthlyHoa,
@@ -314,6 +340,7 @@ export const DEFAULT_INPUTS: PropertyInputs = {
   loanTermYears: 30,
   closingCostPercent: 3,
   loanPointsPercent: 0,
+  pmiMonthlyPercent: 0,
   rehabCost: 0,
 
   monthlyRent: 2600,

@@ -256,6 +256,7 @@ export function DuplexTab({
             <NumberField label="Loan term" suffix="yrs" value={inputs.loanTermYears} onChange={(v) => set("loanTermYears", v)} step={1} info={FIELD_HELP.loanTerm} />
             <NumberField label="Closing costs" suffix="%" value={inputs.closingCostPercent} onChange={(v) => set("closingCostPercent", v)} step={0.5} info={FIELD_HELP.closingCosts} />
             <NumberField label="Loan points" suffix="%" value={inputs.loanPointsPercent} onChange={(v) => set("loanPointsPercent", v)} step={0.25} info={FIELD_HELP.loanPoints} />
+            <NumberField label="PMI" suffix="%/yr" value={inputs.pmiMonthlyPercent} onChange={(v) => set("pmiMonthlyPercent", v)} step={0.05} help="Only applies below 20% down" info={FIELD_HELP.pmi} />
             <NumberField label="Rehab budget" prefix="$" value={inputs.rehabCost} onChange={(v) => set("rehabCost", v)} step={500} info={FIELD_HELP.rehabCost} />
           </div>
 
@@ -404,6 +405,14 @@ function DuplexResults({
         <MetricCard label="Price per unit" value={formatCurrency(result.pricePerUnit)} info={RESULT_HELP.pricePerUnit} />
         <MetricCard label="Break-even ratio" value={formatPercent(result.breakEvenRatioPercent)} tone={result.breakEvenRatioPercent <= 85 ? "positive" : "negative"} info={RESULT_HELP.breakEvenRatio} />
       </div>
+
+      {result.monthlyPmi > 0 && (
+        <p className="text-xs text-slate-500">
+          {result.pmiDropsAfterYear !== null
+            ? `PMI (${formatCurrency(result.monthlyPmi)}/mo) is already factored into cash flow above and stops automatically after year ${result.pmiDropsAfterYear}, once your loan balance reaches 80% of the original purchase price.`
+            : `PMI (${formatCurrency(result.monthlyPmi)}/mo) is already factored into cash flow above and doesn't fall to 80% loan-to-value within your ${result.projection.length}-year hold period at this pace of paydown.`}
+        </p>
+      )}
 
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
         <h3 className="px-5 py-3 text-sm font-semibold text-slate-700 bg-slate-50 border-b border-slate-200">
