@@ -112,6 +112,20 @@ added operational effort and regulatory exposure.
   rather than a server-side PDF renderer — no extra runtime dependency,
   works in any deploy environment.
 
+### HELOC Payoff (velocity banking) calculator
+`lib/calc/helocPaydown.ts` simulates the HELOC "chunking" strategy
+(draw a lump sum against a HELOC, apply it to mortgage principal, then
+route monthly cash flow through the HELOC before drawing the next chunk)
+month-by-month, alongside two baselines computed with the same cash
+flow: minimum payments only, and applying that cash flow directly to
+mortgage principal with no HELOC involved. It's a standalone tool (no
+purchase price, no save/portfolio integration — just an existing
+mortgage balance and a HELOC) that surfaces the actual lever driving the
+payoff speed: the strategy comparison in `components/tabs/HelocPayoffTab.tsx`
+usually shows HELOC chunking landing close to — or, when the HELOC rate
+exceeds the mortgage rate, worse than — simply sending the same monthly
+cash flow straight to principal.
+
 ### Grants & Funding finder
 `lib/grants.ts` is a curated reference of ~20 real federal (plus
 representative state/local) programs — FHA 203(k), USDA rural repair

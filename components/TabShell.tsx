@@ -9,6 +9,7 @@ import { DuplexTab } from "./tabs/DuplexTab";
 import { MultiUnitTab } from "./tabs/MultiUnitTab";
 import { CommercialTab } from "./tabs/CommercialTab";
 import { ShortTermRentalTab } from "./tabs/ShortTermRentalTab";
+import { HelocPayoffTab } from "./tabs/HelocPayoffTab";
 import { HistoryTab } from "./tabs/HistoryTab";
 import { PortfolioTab } from "./tabs/PortfolioTab";
 
@@ -18,6 +19,7 @@ const TABS = [
   { id: "multi-unit", label: "Multi-Unit" },
   { id: "commercial", label: "Commercial" },
   { id: "short-term-rental", label: "Short-Term Rental" },
+  { id: "heloc-payoff", label: "HELOC Payoff" },
   { id: "grants", label: "Grants & Funding" },
   { id: "history", label: "Saved" },
   { id: "portfolio", label: "Portfolio" },
@@ -78,6 +80,7 @@ export function TabShell() {
         {active === "short-term-rental" && (
           <ShortTermRentalTab loadAnalysisId={loadRequest?.id} loadNonce={loadRequest?.nonce} />
         )}
+        {active === "heloc-payoff" && <HelocPayoffTab />}
         {active === "grants" && <GrantsFinder />}
         {active === "history" && <HistoryTab onLoad={handleLoad} />}
         {active === "portfolio" && <PortfolioTab />}
