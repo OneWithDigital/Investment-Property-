@@ -13,7 +13,7 @@ import {
 import type { Verdict } from "@/lib/types";
 import type { StateFactor } from "@/lib/locationFactors";
 import { NumberField, SectionHeading } from "@/components/FieldGroup";
-import { FIELD_HELP } from "@/lib/fieldHelp";
+import { FIELD_HELP, RESULT_HELP } from "@/lib/fieldHelp";
 import { MetricCard } from "@/components/MetricCard";
 import { VerdictBanner } from "@/components/VerdictBanner";
 import { AnalysisToolbar } from "@/components/AnalysisToolbar";
@@ -331,13 +331,13 @@ function CommercialResults({ result, verdict }: { result: CommercialResult; verd
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetricCard label="Monthly cash flow" value={formatCurrency(result.monthlyCashFlow)} tone={result.monthlyCashFlow >= 0 ? "positive" : "negative"} />
-        <MetricCard label="Cash-on-cash return" value={formatPercent(result.cashOnCashReturnPercent)} tone={result.cashOnCashReturnPercent >= 8 ? "positive" : "negative"} />
-        <MetricCard label="Cap rate (going-in)" value={formatPercent(result.capRatePercent)} />
-        <MetricCard label="DSCR" value={Number.isFinite(result.dscr) ? result.dscr.toFixed(2) : "∞"} tone={result.dscr >= 1.25 ? "positive" : "negative"} />
-        <MetricCard label="Price / sqft" value={formatCurrency(result.pricePerSqft)} />
+        <MetricCard label="Cash-on-cash return" value={formatPercent(result.cashOnCashReturnPercent)} tone={result.cashOnCashReturnPercent >= 8 ? "positive" : "negative"} info={RESULT_HELP.cashOnCash} />
+        <MetricCard label="Cap rate (going-in)" value={formatPercent(result.capRatePercent)} info={RESULT_HELP.capRate} />
+        <MetricCard label="DSCR" value={Number.isFinite(result.dscr) ? result.dscr.toFixed(2) : "∞"} tone={result.dscr >= 1.25 ? "positive" : "negative"} info={RESULT_HELP.dscr} />
+        <MetricCard label="Price / sqft" value={formatCurrency(result.pricePerSqft)} info={RESULT_HELP.pricePerSqft} />
         <MetricCard label="Avg in-place rent / sqft" value={`${formatCurrency(result.avgInPlaceRentPerSqft, 2)}/yr`} />
-        <MetricCard label="Occupancy" value={formatPercent(result.occupancyPercent)} tone={result.occupancyPercent >= 90 ? "positive" : "negative"} />
-        <MetricCard label="WALT (lease term remaining)" value={`${result.waltYears.toFixed(1)} yrs`} tone={result.waltYears >= 3 ? "positive" : "negative"} />
+        <MetricCard label="Occupancy" value={formatPercent(result.occupancyPercent)} tone={result.occupancyPercent >= 90 ? "positive" : "negative"} info={RESULT_HELP.commercialOccupancy} />
+        <MetricCard label="WALT (lease term remaining)" value={`${result.waltYears.toFixed(1)} yrs`} tone={result.waltYears >= 3 ? "positive" : "negative"} info={RESULT_HELP.walt} />
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -371,10 +371,10 @@ function CommercialResults({ result, verdict }: { result: CommercialResult; verd
           </table>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 border-t border-slate-200 bg-slate-50">
-          <MetricCard label="Net sale proceeds" value={formatCurrency(result.netSaleProceedsAtExit)} />
+          <MetricCard label="Net sale proceeds" value={formatCurrency(result.netSaleProceedsAtExit)} info={RESULT_HELP.netSaleProceeds} />
           <MetricCard label="Total profit at exit" value={formatCurrency(result.totalReturnAtExit)} tone={result.totalReturnAtExit >= 0 ? "positive" : "negative"} />
-          <MetricCard label="Equity multiple" value={`${result.equityMultiple.toFixed(2)}x`} />
-          <MetricCard label="IRR" value={result.irrPercent !== null ? formatPercent(result.irrPercent) : "—"} tone={result.irrPercent !== null ? (result.irrPercent >= 12 ? "positive" : "negative") : "neutral"} />
+          <MetricCard label="Equity multiple" value={`${result.equityMultiple.toFixed(2)}x`} info={RESULT_HELP.equityMultiple} />
+          <MetricCard label="IRR" value={result.irrPercent !== null ? formatPercent(result.irrPercent) : "—"} tone={result.irrPercent !== null ? (result.irrPercent >= 12 ? "positive" : "negative") : "neutral"} info={RESULT_HELP.irr} />
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import type { CalculationResult, Verdict } from "@/lib/types";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 import { DUE_DILIGENCE_CHECKLIST, type StateFactor } from "@/lib/locationFactors";
+import { RESULT_HELP } from "@/lib/fieldHelp";
 import { MetricCard } from "./MetricCard";
 import { VerdictBanner } from "./VerdictBanner";
 
@@ -37,17 +38,20 @@ export function ResultsDashboard({
           label="Cash-on-cash return"
           value={formatPercent(result.cashOnCashReturnPercent)}
           tone={result.cashOnCashReturnPercent >= 8 ? "positive" : "negative"}
+          info={RESULT_HELP.cashOnCash}
         />
         <MetricCard
           label="Cap rate"
           value={formatPercent(result.capRatePercent)}
           tone={result.capRatePercent >= 6 ? "positive" : "negative"}
+          info={RESULT_HELP.capRate}
         />
         <MetricCard
           label="DSCR"
           value={Number.isFinite(result.dscr) ? result.dscr.toFixed(2) : "∞"}
           tone={result.dscr >= 1.25 ? "positive" : "negative"}
           help="Lenders typically want ≥ 1.25"
+          info={RESULT_HELP.dscr}
         />
         <MetricCard
           label="Cash needed to close"
@@ -64,12 +68,14 @@ export function ResultsDashboard({
           label="Gross rent multiplier"
           value={formatNumber(result.grossRentMultiplier, 1)}
           help="Lower is generally better"
+          info={RESULT_HELP.grossRentMultiplier}
         />
         <MetricCard
           label="Break-even ratio"
           value={formatPercent(result.breakEvenRatioPercent)}
           tone={result.breakEvenRatioPercent <= 85 ? "positive" : "negative"}
           help="Expenses+debt as % of income"
+          info={RESULT_HELP.breakEvenRatio}
         />
       </div>
 
@@ -138,6 +144,7 @@ export function ResultsDashboard({
             label="Net sale proceeds"
             value={formatCurrency(result.netSaleProceedsAtExit)}
             help="After payoff & selling costs"
+            info={RESULT_HELP.netSaleProceeds}
           />
           <MetricCard
             label="Total profit at exit"
@@ -148,6 +155,7 @@ export function ResultsDashboard({
             label="Equity multiple"
             value={`${formatNumber(result.equityMultiple, 2)}x`}
             help="Total returned / cash invested"
+            info={RESULT_HELP.equityMultiple}
           />
           <MetricCard
             label="IRR"
@@ -159,6 +167,7 @@ export function ResultsDashboard({
                   : "negative"
                 : "neutral"
             }
+            info={RESULT_HELP.irr}
           />
         </div>
       </div>

@@ -169,3 +169,85 @@ export const FIELD_HELP = {
     body: "Rent billed but never collected — a tenant defaults, goes bankrupt, or simply doesn't pay. Distinct from vacancy (an empty space); this is occupied space that isn't actually paying.",
   },
 } satisfies Record<string, FieldHelpEntry>;
+
+/**
+ * Same idea as FIELD_HELP, but for results/metric cards instead of
+ * inputs — the headline numbers a first-time user has to reverse-engineer
+ * from context otherwise, and the ones an experienced investor checks
+ * first. Kept as a separate export since these explain a computed
+ * output, not something you type in.
+ */
+export const RESULT_HELP = {
+  capRate: {
+    title: "Cap rate",
+    body: "Net operating income ÷ purchase price, ignoring financing entirely — the return if you bought the property in cash. Higher isn't automatically better: a high cap rate often signals higher perceived risk or a slower-growth market, not a better deal. 6%+ is a common single-family/duplex screening bar; commercial and multifamily cap rates vary a lot by market and asset class.",
+  },
+  cashOnCash: {
+    title: "Cash-on-cash return",
+    body: "Annual pre-tax cash flow ÷ total cash invested (down payment + closing costs + rehab). Unlike cap rate, this reflects your actual leveraged return — what you're earning on the cash you put in, not on the full purchase price. 8%+ is a common long-term-rental screening bar; short-term rentals are held to a higher bar (12%+) given the added operational effort and risk.",
+  },
+  dscr: {
+    title: "DSCR (Debt Service Coverage Ratio)",
+    body: "Net operating income ÷ annual mortgage payment — how many times over the property's income covers its own debt payment. Lenders typically require at least 1.20–1.25 to originate a loan; below 1.0 means the property doesn't generate enough income to cover its own mortgage, before you even take a draw.",
+  },
+  grossRentMultiplier: {
+    title: "Gross rent multiplier (GRM)",
+    body: "Purchase price ÷ annual gross rent. A fast, rough screening tool — lower means you're paying less per dollar of rent — but it completely ignores expenses, so it's a first-pass filter, not a substitute for cap rate or actual cash flow.",
+  },
+  breakEvenRatio: {
+    title: "Break-even ratio",
+    body: "(Operating expenses + debt service) ÷ gross income — how much of your income cushion you have before the property stops covering its own bills. Lower is safer; many lenders like to see this at 85% or below.",
+  },
+  irr: {
+    title: "IRR (Internal Rate of Return)",
+    body: "The annualized return accounting for the size and timing of every cash flow — each year's cash flow plus the lump sum at sale — not just a simple average. It's the most complete single number for comparing this deal against your other investment options, but it's only as reliable as the growth and exit assumptions feeding it.",
+  },
+  equityMultiple: {
+    title: "Equity multiple",
+    body: "Total cash returned (all cash flow plus net sale proceeds) ÷ total cash invested. A 2.0x means you got back double what you put in over the hold period. Useful alongside IRR, since IRR alone shows the rate of return but not the absolute dollar scale.",
+  },
+  netSaleProceeds: {
+    title: "Net sale proceeds",
+    body: "What actually lands in your pocket at sale: the projected sale price, minus paying off the remaining loan balance, minus selling costs (commission, closing costs).",
+  },
+  impliedValue: {
+    title: "Implied value (at market cap rate)",
+    body: "Net operating income ÷ the market cap rate you entered. This is the income-approach valuation appraisers and lenders actually use for income property — compare it to the purchase price to see whether you're paying above or below what the property's income alone would justify.",
+  },
+  expenseRatio: {
+    title: "Expense ratio",
+    body: "Total operating expenses ÷ effective gross income — what share of every income dollar goes to running the property before debt service. Lower generally means more efficient operations, but an unusually low ratio can also be a red flag for under-budgeted maintenance or CapEx.",
+  },
+  pricePerUnit: {
+    title: "Price per unit",
+    body: "Purchase price ÷ number of units — the standard way multifamily deals get compared against other multifamily deals, independent of unit size or mix.",
+  },
+  pricePerSqft: {
+    title: "Price / sqft",
+    body: "Purchase price ÷ building square footage — the standard way commercial deals get compared against other listings in the same market.",
+  },
+  walt: {
+    title: "WALT (Weighted Average Lease Term)",
+    body: "The average remaining lease term across all tenants, weighted by how much rent each one contributes. A low WALT means a meaningful share of your rent roll could turn over soon — rollover risk if re-leasing takes time, requires concessions, or a leasing commission.",
+  },
+  commercialOccupancy: {
+    title: "Occupancy",
+    body: "Leased square footage ÷ total building square footage. Different from residential vacancy % — this is about how much space is under lease, not how many units are physically filled.",
+  },
+  revenuePerAvailableNight: {
+    title: "RevPAN (Revenue per available night)",
+    body: "Gross booking revenue ÷ total nights available in the year. The short-term-rental industry's standard way to compare listings apples-to-apples regardless of pricing strategy — a high-ADR/low-occupancy listing and a low-ADR/high-occupancy listing can land at the same RevPAN.",
+  },
+  grossBookingRevenue: {
+    title: "Gross booking revenue",
+    body: "Total revenue collected from guests across the year, before platform fees, cleaning costs, or any other expenses are subtracted.",
+  },
+  effectiveHousingCost: {
+    title: "Effective housing cost",
+    body: "What you actually pay out of pocket each month to live in your unit, after subtracting the rent your tenants pay from your total mortgage and expenses. Can go negative — meaning tenants are covering more than your full housing cost.",
+  },
+  breakEvenOccupancy: {
+    title: "Break-even occupancy",
+    body: "The minimum occupancy rate needed for booking revenue to cover all expenses and debt service — below this, the property loses money. The bigger the gap between this and your assumed occupancy, the more cushion you have if bookings come in softer than expected.",
+  },
+} satisfies Record<string, FieldHelpEntry>;

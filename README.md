@@ -121,7 +121,11 @@ property-type-specific entries (ADR, tenant reimbursement %, economic
 vacancy) added per calculator. Deliberately not applied to every single
 field — self-explanatory ones (building sqft, avg nights/stay) don't get
 a box, since annotating everything would bury the fields that actually
-need it.
+need it. The same `InfoHint` component is reused on `MetricCard` (via a
+second `RESULT_HELP` export) for the headline results-page numbers —
+cap rate, cash-on-cash return, DSCR, IRR, equity multiple, WALT, RevPAN,
+and the other type-specific metrics — since those are exactly the terms
+a first-time user has to reverse-engineer from the verdict otherwise.
 
 ### Saved analyses, portfolio, and reports
 - **Save** any analysis from any calculator tab (`SavedAnalysis` Prisma
