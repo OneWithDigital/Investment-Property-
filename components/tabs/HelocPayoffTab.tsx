@@ -13,6 +13,7 @@ import {
 import { monthlyPrincipalAndInterest } from "@/lib/calculations";
 import { NumberField, SectionHeading } from "@/components/FieldGroup";
 import { MetricCard } from "@/components/MetricCard";
+import { PrintableReport } from "@/components/PrintableReport";
 import { formatCurrency } from "@/lib/format";
 
 function formatMonths(months: number | null): string {
@@ -343,6 +344,16 @@ function HelocPayoffResults({
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2 mb-1">
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Print / Save PDF
+        </button>
+      </div>
+
       {helocChunking.everExceededHelocLimit && (
         <div className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800">
           <strong>This plan would exceed your HELOC limit</strong> around month{" "}
@@ -501,6 +512,32 @@ function HelocPayoffResults({
           or tax-deductibility differences.
         </p>
       </div>
+
+      <PrintableReport
+        title="HELOC Mortgage Payoff Analysis"
+        address=""
+        metrics={[
+          { label: "Cash-flow style", value: STYLE_INFO[inputs.cashFlowStyle].label },
+          { label: "Current P&I payment", value: formatCurrency(result.monthlyPayment) },
+          { label: "Monthly discretionary cash flow", value: formatCurrency(inputs.monthlyDiscretionaryIncome) },
+          { label: "HELOC limit / buffer kept unused", value: `${formatCurrency(inputs.helocLimit)} / ${formatCurrency(inputs.helocBufferAmount)}` },
+          { label: "Minimum payments — debt-free in", value: formatMonths(minimumPayments.monthsToMortgageFreedom) },
+          { label: "Minimum payments — total interest", value: formatCurrency(minimumPayments.totalInterestPaid) },
+          { label: "Extra principal — debt-free in", value: formatMonths(extraPrincipal.monthsToMortgageFreedom) },
+          { label: "Extra principal — total interest", value: formatCurrency(extraPrincipal.totalInterestPaid) },
+          { label: "HELOC chunking — debt-free in", value: formatMonths(helocChunking.monthsToTotalFreedom) },
+          { label: "HELOC chunking — total interest", value: formatCurrency(helocChunking.totalInterestPaid) },
+        ]}
+        tableTitle="HELOC chunking — year-by-year balances"
+        tableHeaders={["Year", "Mortgage balance", "HELOC balance", "Cumulative interest"]}
+        tableRows={helocChunking.yearly.map((snap) => [
+          `${Math.round(snap.month / 12)}${snap.month % 12 !== 0 ? ` (mo ${snap.month})` : ""}`,
+          formatCurrency(snap.mortgageBalance),
+          formatCurrency(snap.helocBalance),
+          formatCurrency(snap.cumulativeInterest),
+        ])}
+        footerNote="Educational simulation, not financial advice. Confirm your actual mortgage payment, HELOC terms (draw period, repayment period, fees, rate caps), and realistic monthly cash flow with your lender or a fee-only financial advisor before restructuring debt this way."
+      />
     </div>
   );
 }

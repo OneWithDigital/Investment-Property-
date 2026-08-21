@@ -8,12 +8,16 @@ export interface ReportMetric {
 export interface PrintableReportProps {
   title: string;
   address: string;
-  verdict: Verdict;
+  verdict?: Verdict;
   metrics: ReportMetric[];
   tableTitle?: string;
   tableHeaders?: string[];
   tableRows?: string[][];
+  footerNote?: string;
 }
+
+const DEFAULT_FOOTER_NOTE =
+  "Educational tool, not financial or legal advice. Verify all inputs against real comps, quotes, and local regulations before purchasing.";
 
 /**
  * Always present in the DOM but hidden on screen (see the .print-report
@@ -31,6 +35,7 @@ export function PrintableReport({
   tableTitle,
   tableHeaders,
   tableRows,
+  footerNote = DEFAULT_FOOTER_NOTE,
 }: PrintableReportProps) {
   return (
     <div className="print-report">
@@ -41,19 +46,21 @@ export function PrintableReport({
           Generated {new Date().toLocaleDateString()} — Investment Property Analyzer
         </p>
 
-        <div className="border border-gray-300 rounded p-4 mt-4">
-          <h2 className="font-bold text-lg">
-            {verdict.label} — Score {verdict.score}/100
-          </h2>
-          <p className="text-sm mt-1">{verdict.summary}</p>
-          <ul className="mt-3 text-sm space-y-1">
-            {verdict.criteria.map((c) => (
-              <li key={c.label}>
-                {c.pass ? "✓" : "✗"} <strong>{c.label}</strong> — {c.detail}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {verdict && (
+          <div className="border border-gray-300 rounded p-4 mt-4">
+            <h2 className="font-bold text-lg">
+              {verdict.label} — Score {verdict.score}/100
+            </h2>
+            <p className="text-sm mt-1">{verdict.summary}</p>
+            <ul className="mt-3 text-sm space-y-1">
+              {verdict.criteria.map((c) => (
+                <li key={c.label}>
+                  {c.pass ? "✓" : "✗"} <strong>{c.label}</strong> — {c.detail}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="grid grid-cols-3 gap-3 mt-4">
           {metrics.map((m) => (
@@ -92,10 +99,7 @@ export function PrintableReport({
           </div>
         )}
 
-        <p className="text-xs text-gray-400 mt-6">
-          Educational tool, not financial or legal advice. Verify all inputs
-          against real comps, quotes, and local regulations before purchasing.
-        </p>
+        <p className="text-xs text-gray-400 mt-6">{footerNote}</p>
       </div>
     </div>
   );
