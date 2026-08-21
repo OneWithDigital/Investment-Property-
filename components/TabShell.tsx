@@ -11,6 +11,7 @@ import { CommercialTab } from "./tabs/CommercialTab";
 import { ShortTermRentalTab } from "./tabs/ShortTermRentalTab";
 import { HistoryTab } from "./tabs/HistoryTab";
 import { PortfolioTab } from "./tabs/PortfolioTab";
+import { BalanceTransferTab } from "./tabs/BalanceTransferTab";
 
 const TABS = [
   { id: "single-family", label: "Single-Family" },
@@ -19,6 +20,7 @@ const TABS = [
   { id: "commercial", label: "Commercial" },
   { id: "short-term-rental", label: "Short-Term Rental" },
   { id: "grants", label: "Grants & Funding" },
+  { id: "balance-transfer", label: "Balance Transfer" },
   { id: "history", label: "Saved" },
   { id: "portfolio", label: "Portfolio" },
 ] as const;
@@ -79,6 +81,7 @@ export function TabShell() {
           <ShortTermRentalTab loadAnalysisId={loadRequest?.id} loadNonce={loadRequest?.nonce} />
         )}
         {active === "grants" && <GrantsFinder />}
+        {active === "balance-transfer" && <BalanceTransferTab />}
         {active === "history" && <HistoryTab onLoad={handleLoad} />}
         {active === "portfolio" && <PortfolioTab />}
       </main>
