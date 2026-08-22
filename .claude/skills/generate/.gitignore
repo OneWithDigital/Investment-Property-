@@ -1,3 +1,0 @@
-# Never commit your API keys or local cruft
-.env
-.DS_Store
